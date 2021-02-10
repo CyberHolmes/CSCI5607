@@ -20,7 +20,7 @@ using namespace std;
 
 
 //Name of image texture
-string textureName = "brick.ppm";
+string textureName = "goldy.ppm";
 
 //Screen size
 int screen_width = 800;
@@ -37,15 +37,39 @@ float vertices[] = {  //The function updateVertices() changes these values to ma
   0.3f, -0.3f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
   -0.3f,  0.3f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 
   -0.3f, -0.3f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+// second object
+  0.9f,  0.9f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+  0.9f, 0.3f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+  0.3f,  0.9f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 
+  0.3f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+// 3rd object
+  0.9f, -0.3f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+  0.9f, -0.9f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+  0.3f, -0.3f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 
+  0.3f, -0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+// 4th object
+  -0.3f, -0.3f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+  -0.3f, -0.9f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+  -0.9f, -0.3f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 
+  -0.9f, -0.9f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
+// 5th object
+  -0.3f, 0.9f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right
+  -0.3f, 0.3f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
+  -0.9f, 0.9f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 
+  -0.9f, 0.3f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left
 };
 
 Point2D origin = Point2D(0,0);
 
 //Watch winding...
-Point2D init_p1 = Point2D(vertices[21],vertices[22]);
-Point2D init_p2 = Point2D(vertices[7],vertices[8]);
-Point2D init_p3 = Point2D(vertices[0],vertices[1]);
-Point2D init_p4 = Point2D(vertices[14],vertices[15]);
+// Point2D init_p1 = Point2D(vertices[21],vertices[22]);
+// Point2D init_p2 = Point2D(vertices[7],vertices[8]);
+// Point2D init_p3 = Point2D(vertices[0],vertices[1]);
+// Point2D init_p4 = Point2D(vertices[14],vertices[15]);
+Point2D init_p3 = Point2D(vertices[21],vertices[22]);
+Point2D init_p4 = Point2D(vertices[7],vertices[8]);
+Point2D init_p1 = Point2D(vertices[0],vertices[1]);
+Point2D init_p2 = Point2D(vertices[14],vertices[15]);
 
 Point2D p1 = init_p1, p2 = init_p2, p3 = init_p3, p4 = init_p4;
 
@@ -55,6 +79,7 @@ Line2D l1 = vee(p1,p2).normalized();
 Line2D l2 = vee(p2,p3).normalized();
 Line2D l3 = vee(p3,p4).normalized();
 Line2D l4 = vee(p4,p1).normalized();
+Line2D l5 = vee(p2,p4).normalized();
 
 
 //Helper variables to track t
@@ -70,10 +95,18 @@ bool do_translate = false;
 bool do_rotate = false;
 bool do_scale = false;
 
-
 //////////////////////////
 ///  Begin your code here
 /////////////////////////
+
+unsigned int numVertices = 4; //control number of vertices of the object
+void animate(float dt);
+Dir2D d_disp = Dir2D(0.1,0.1);
+float g_size = 1.05;
+float d_angle = 0.6;
+bool animateEnable = false;
+float dt = 0.015; //control how fast animation goes
+bool showMulti = false;
 
 //Done: Read from ASCII (P3) PPM files
 //Inputs are output variables for returning the image width and heigth
@@ -141,34 +174,52 @@ void mouseClicked(float m_x, float m_y){
    do_translate = false;
    do_rotate = false;
    do_scale = false;
-   float d = 0.01; //in range radius
+   float d = 0.02; //in range radius   
 
-   if ((pointTriangleCornerDist(clicked_mouse,p1,p2,p3)<0.02) || dist(clicked_mouse,p4)<0.02)
-      {do_scale=true;}
-   else if (pointSegmentDistance(clicked_mouse,p1,p2)<d || pointSegmentDistance(clicked_mouse,p2,p3)<d || pointSegmentDistance(clicked_mouse,p3,p4)<d || pointSegmentDistance(clicked_mouse,p4,p1)<d)
+   if (numVertices == 4)
    {
-      do_rotate = true;
+      if ((pointTriangleCornerDist(clicked_mouse,p1,p2,p3)<0.02) || dist(clicked_mouse,p4)<0.02)
+      {
+         do_scale=true;      
+      }
+      else if (pointSegmentDistance(clicked_mouse,p1,p2)<d || pointSegmentDistance(clicked_mouse,p2,p3)<d || pointSegmentDistance(clicked_mouse,p3,p4)<d || pointSegmentDistance(clicked_mouse,p4,p1)<d)
+      {
+         do_rotate = true;      
+      }
+      else if (pointInTriangle(clicked_mouse,p1,p2,p3) || pointInTriangle(clicked_mouse,p4,p1,p3))
+      {
+         do_translate=true;      
+      } 
    }
-   else if (pointInTriangle(clicked_mouse,p1,p2,p3) || pointInTriangle(clicked_mouse,p4,p1,p3))
-      do_translate=true;
+   else if (numVertices == 3)
+   {
+      if (pointTriangleCornerDist(clicked_mouse,p3,p4,p2)<0.02)
+      {
+         do_scale=true;      
+      }
+      else if (pointSegmentDistance(clicked_mouse,p3,p4)<d || pointSegmentDistance(clicked_mouse,p4,p2)<d || pointSegmentDistance(clicked_mouse,p2,p3)<d)
+      {
+         do_rotate = true;      
+      }
+      else if (pointInTriangle(clicked_mouse,p1,p4,p3))
+      {
+         do_translate=true;      
+      } 
+   }
 }   
 
-//TODO: Update the position, rotation, or scale based on the mouse movement
-//  I've implemented the logic for position, you need to do scaling and angle
-//TODO: Notice how smooth draging the square is (e.g., there are no "jumps" when you click), 
-//      try to make your implementation of rotate and scale as smooth
 void mouseDragged(float m_x, float m_y){
-   Point2D cur_mouse = Point2D(m_x,m_y);
+   Point2D cur_mouse = Point2D(m_x,m_y);   
    
    if (do_translate){
       Dir2D disp = cur_mouse-clicked_mouse;
-      rect_pos = clicked_pos+disp;
+      rect_pos = clicked_pos+disp;      
    }
    
    if (do_scale){
       //Compute the new size, g_size, based on the mouse positions
       float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude(); 
-      rect_scale = clicked_size*g_size;
+      rect_scale = clicked_size*g_size;      
    }
    
    if (do_rotate){
@@ -176,7 +227,7 @@ void mouseDragged(float m_x, float m_y){
       Line2D l1 = join(clicked_pos,clicked_mouse);
       Line2D l2 = join(clicked_pos,cur_mouse);
       float d_angle = clamp(angle(l1,l2),0,3.14);      
-      rect_angle = clicked_angle-sign(vee(cur_mouse,l1))*angle(l1,l2);
+      rect_angle = clicked_angle-sign(vee(cur_mouse,l1))*angle(l1,l2);      
    }
 
    //Assuming the angle (rect_angle), position (rect_pos), and scale (rect_scale) of the rectangle
@@ -204,11 +255,104 @@ void mouseDragged(float m_x, float m_y){
    p4 = transform(p4,movement);
 
    //Update lines based on new points
-   l1 = vee(p1,p2).normalized();
-   l2 = vee(p2,p3).normalized();
-   l3 = vee(p3,p4).normalized();
-   l4 = vee(p4,p1).normalized();
-   
+   if (numVertices==4)
+   {
+      l1 = vee(p1,p2).normalized();
+      l2 = vee(p2,p3).normalized();
+      l3 = vee(p3,p4).normalized();
+      l4 = vee(p4,p1).normalized();
+   } else {
+      //l1 = vee(p1,p2).normalized();
+      l2 = vee(p2,p3).normalized();
+      l3 = vee(p3,p4).normalized();
+      //l4 = vee(p4,p1).normalized();
+      l5 = vee(p2,p4).normalized();
+   } 
+   updateVertices();
+}
+
+void animate(float dt){
+
+   srand(time(NULL));
+   //Dir2D disp = Dir2D((float)(rand()%100)/100),(float)(rand()%100)/100));
+   rect_pos.x += d_disp.x*dt;
+   rect_pos.y += d_disp.y*dt;
+   float cur_rect_size = rect_scale*0.3; // current rectangle size
+   float b1 = rect_scale*0.3-1; // left or top boundary
+   float b2 = -rect_scale*0.3+1; // right or bottom boundary
+   if (rect_pos.x<b1)
+   {
+      rect_pos.x=b1;
+      d_disp.x=-d_disp.x;
+      d_angle = -d_angle;
+   }      
+   if (rect_pos.x>b2)
+   {
+      rect_pos.x=b2;
+      d_disp.x=-d_disp.x;
+      d_angle = -d_angle;
+   }
+   if (rect_pos.y<b1)
+   {
+      rect_pos.y=b1;
+      d_disp.y=-d_disp.y;
+      d_angle = -d_angle;
+   } 
+   if (rect_pos.y>b2)
+   {
+      rect_pos.y=b2;
+      d_disp.y=-d_disp.y;
+      d_angle = -d_angle;
+   } 
+
+   //float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude(); 
+   rect_scale *= 1-(1-g_size)*dt;
+   if (rect_scale>1.5)
+      g_size = 0.9;
+   if (rect_scale<0.8)
+      g_size = 1.1; 
+
+   //float d_angle = clamp(angle(l1,l2),0,3.14);      
+   rect_angle -= d_angle*dt;      
+
+   //Assuming the angle (rect_angle), position (rect_pos), and scale (rect_scale) of the rectangle
+   //  have all been set above, the following code should rotate, shift and scale the shape correctly.
+   //It's still good to read through and make sure you understand how this works!
+
+   Motor2D translate, rotate;
+
+   Dir2D disp = rect_pos-origin;
+   translate = Translator2D(disp);
+   rotate = Rotator2D(rect_angle, rect_pos);
+
+   Motor2D movement = rotate*translate;
+
+   //Scale points
+   p1 = init_p1.scale(rect_scale);
+   p2 = init_p2.scale(rect_scale);
+   p3 = init_p3.scale(rect_scale);
+   p4 = init_p4.scale(rect_scale);
+
+   //Use Motor to translate and rotate points
+   p1 = transform(p1,movement);
+   p2 = transform(p2,movement);
+   p3 = transform(p3,movement);
+   p4 = transform(p4,movement);
+
+   //Update lines based on new points
+   if (numVertices==4)
+   {
+      l1 = vee(p1,p2).normalized();
+      l2 = vee(p2,p3).normalized();
+      l3 = vee(p3,p4).normalized();
+      l4 = vee(p4,p1).normalized();
+   } else {
+      //l1 = vee(p1,p2).normalized();
+      l2 = vee(p2,p3).normalized();
+      l3 = vee(p3,p4).normalized();
+      //l4 = vee(p4,p1).normalized();
+      l5 = vee(p2,p4).normalized();
+   }
    updateVertices();
 }
 
@@ -239,6 +383,8 @@ void r_keyPressed(){
    rect_scale = 1;
    rect_angle = 0.0;
    glDisable(GL_FRAMEBUFFER_SRGB);
+   numVertices = 4;
+   animateEnable = false;
 }
 
 /////////////////////////////
@@ -275,7 +421,7 @@ bool fullscreen = false;
 
 float mouse_dragging = false;
 int main(int argc, char *argv[]){
-
+   
    SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
    
    //Ask SDL to get a fairly recent version of OpenGL (3.2 or greater)
@@ -284,7 +430,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	
 	//Create a window (offsetx, offsety, width, height, flags)
-	SDL_Window* window = SDL_CreateWindow("Hailin's OpenGL Program", 100, 100, screen_width, screen_height, SDL_WINDOW_OPENGL);
+	SDL_Window* window = SDL_CreateWindow("Hailin's Project 1", 100, 100, screen_width, screen_height, SDL_WINDOW_OPENGL);
    //TODO: TEST your understanding: Try changing the title of the window to something more personalized.
 	
 	//The above window cannot be resized which makes some code slightly easier.
@@ -407,7 +553,11 @@ int main(int argc, char *argv[]){
    //Event Loop (Loop forever processing each event as fast as possible)
    SDL_Event windowEvent;
    bool done = false;
+   bool gammaOn = false;   
+
    while (!done){
+      if (animateEnable)
+         animate(dt);
       while (SDL_PollEvent(&windowEvent)){  //Process input events (e.g., mouse & keyboard)
          if (windowEvent.type == SDL_QUIT) done = true;
          //List of keycodes: https://wiki.libsdl.org/SDL_Keycode - You can catch many special keys
@@ -418,17 +568,34 @@ int main(int argc, char *argv[]){
             fullscreen = !fullscreen;
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) //If "r" is pressed
             r_keyPressed();
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "r" is pressed
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "b" is pressed
             //Apply gamma correction to brighten image
-            glEnable(GL_FRAMEBUFFER_SRGB);
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "r" is pressed
-            //Apply gamma correction to brighten image
-            glDisable(GL_FRAMEBUFFER_SRGB);
+            {
+               gammaOn? glDisable(GL_FRAMEBUFFER_SRGB):glEnable(GL_FRAMEBUFFER_SRGB);
+               gammaOn = !gammaOn;
+            }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
+            numVertices = 3;
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
+            numVertices = 4;
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) //If "space" is pressed
+         {
+            animateEnable = !animateEnable;
+            if (animateEnable)
+            {
+               srand(time(NULL));
+               d_disp = Dir2D((float)(rand()%100)/100,(float)(rand()%100)/100);
+            }
+         }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_m) //If "m" is pressed
+            showMulti = !showMulti;
+            
          SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
       }
       
       
       int mx, my;
+      
       if (SDL_GetMouseState(&mx, &my) & SDL_BUTTON(SDL_BUTTON_LEFT)) { //Is the mouse down?
          if (mouse_dragging == false){
             mouseClicked(2*mx/(float)screen_width - 1, 1-2*my/(float)screen_height);
@@ -448,9 +615,15 @@ int main(int argc, char *argv[]){
       glClearColor(0.6f, 0.6, 0.6f, 0.0f);
       //glClearColor(0.0f, 0.0, 0.0f, 0.0f);
       glClear(GL_COLOR_BUFFER_BIT);
-               
-      glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Draw the two triangles (4 vertices) making up the square
-      //TODO: TEST your understanding: What shape do you expect to see if you change the above 4 to 3?  Guess, then try it!
+
+      if (showMulti)
+      {
+         glDrawArrays(GL_TRIANGLE_STRIP, 4, 4); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 8, 4); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 12, 4); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 16, 4); //Draw the two triangles (4 vertices) making up the square
+      }
+      glDrawArrays(GL_TRIANGLE_STRIP, 0, numVertices); //Draw the two triangles (4 vertices) making up the square
 
       SDL_GL_SwapWindow(window); //Double buffering
    }
