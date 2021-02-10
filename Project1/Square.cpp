@@ -1,5 +1,4 @@
-//HW 0 - Moving Square
-//Starter code for the first homework assignment.
+//Project 1 - Moving Square
 //This code assumes SDL2 and OpenGL are both properly installed on your system
 
 #include "glad/glad.h"  //Include order can matter here
@@ -158,14 +157,9 @@ unsigned char* loadImage(int& img_w, int& img_h){
    return img_data;
 }
 
-//TODO: Choose between translate, rotate, and scale based on where the user clicked
-// Here, I just assume there is always a translate operation. Fix this to switch between
-// translate, rotate, and scale based on where on the square the user clicks.
 void mouseClicked(float m_x, float m_y){   
    printf("Clicked at %f, %f\n",m_x,m_y);
 
-   //We may need to know the state of the mouse and the square at the moment the user clicked
-   //  so we save them in the follow four variables.
    clicked_mouse = Point2D(m_x,m_y);
    clicked_pos = rect_pos;
    clicked_angle = rect_angle;
@@ -174,11 +168,11 @@ void mouseClicked(float m_x, float m_y){
    do_translate = false;
    do_rotate = false;
    do_scale = false;
-   float d = 0.02; //in range radius   
+   float d = 0.03; //in range radius   
 
    if (numVertices == 4)
    {
-      if ((pointTriangleCornerDist(clicked_mouse,p1,p2,p3)<0.02) || dist(clicked_mouse,p4)<0.02)
+      if ((pointTriangleCornerDist(clicked_mouse,p1,p2,p3)<d) || dist(clicked_mouse,p4)<d)
       {
          do_scale=true;      
       }
@@ -193,7 +187,7 @@ void mouseClicked(float m_x, float m_y){
    }
    else if (numVertices == 3)
    {
-      if (pointTriangleCornerDist(clicked_mouse,p3,p4,p2)<0.02)
+      if (pointTriangleCornerDist(clicked_mouse,p3,p4,p2)<d)
       {
          do_scale=true;      
       }
@@ -201,7 +195,7 @@ void mouseClicked(float m_x, float m_y){
       {
          do_rotate = true;      
       }
-      else if (pointInTriangle(clicked_mouse,p1,p4,p3))
+      else if (pointInTriangle(clicked_mouse,p2,p4,p3))
       {
          do_translate=true;      
       } 
@@ -274,7 +268,6 @@ void mouseDragged(float m_x, float m_y){
 void animate(float dt){
 
    srand(time(NULL));
-   //Dir2D disp = Dir2D((float)(rand()%100)/100),(float)(rand()%100)/100));
    rect_pos.x += d_disp.x*dt;
    rect_pos.y += d_disp.y*dt;
    float cur_rect_size = rect_scale*0.3; // current rectangle size
@@ -305,19 +298,13 @@ void animate(float dt){
       d_angle = -d_angle;
    } 
 
-   //float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude(); 
    rect_scale *= 1-(1-g_size)*dt;
    if (rect_scale>1.5)
       g_size = 0.9;
    if (rect_scale<0.8)
       g_size = 1.1; 
-
-   //float d_angle = clamp(angle(l1,l2),0,3.14);      
+ 
    rect_angle -= d_angle*dt;      
-
-   //Assuming the angle (rect_angle), position (rect_pos), and scale (rect_scale) of the rectangle
-   //  have all been set above, the following code should rotate, shift and scale the shape correctly.
-   //It's still good to read through and make sure you understand how this works!
 
    Motor2D translate, rotate;
 
@@ -371,7 +358,7 @@ void updateVertices(){
    vertices[22] =  p1.y;  //Bottom left y
 }
 
-//TODO: Resest the square's position, orientation, and scale
+//Resest the square's position, orientation, and scale
 void r_keyPressed(){
    cout << "The 'r' key was pressed" <<endl;
    p1 = init_p1;
@@ -389,9 +376,6 @@ void r_keyPressed(){
 
 /////////////////////////////
 /// ... below is OpenGL specifc code,
-///     we will cover it in detail around Week 9,
-///     but you should try to poke around a bit right now.
-///     I've annotated some parts with "TODO: TEST ..." check those out.
 ////////////////////////////
 
 // Shader sources
@@ -431,7 +415,6 @@ int main(int argc, char *argv[]){
 	
 	//Create a window (offsetx, offsety, width, height, flags)
 	SDL_Window* window = SDL_CreateWindow("Hailin's Project 1", 100, 100, screen_width, screen_height, SDL_WINDOW_OPENGL);
-   //TODO: TEST your understanding: Try changing the title of the window to something more personalized.
 	
 	//The above window cannot be resized which makes some code slightly easier.
 	//Below show how to make a full screen window or allow resizing
@@ -585,6 +568,7 @@ int main(int argc, char *argv[]){
             {
                srand(time(NULL));
                d_disp = Dir2D((float)(rand()%100)/100,(float)(rand()%100)/100);
+               d_angle = (float)(rand()%30+80)/100;
             }
          }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_m) //If "m" is pressed
@@ -613,7 +597,6 @@ int main(int argc, char *argv[]){
       
       // Clear the screen to grey
       glClearColor(0.6f, 0.6, 0.6f, 0.0f);
-      //glClearColor(0.0f, 0.0, 0.0f, 0.0f);
       glClear(GL_COLOR_BUFFER_BIT);
 
       if (showMulti)
@@ -636,8 +619,7 @@ int main(int argc, char *argv[]){
    glDeleteBuffers(1, &vbo);
 
    glDeleteVertexArrays(1, &vao);
-
-
+   
    //Clean Up
    SDL_GL_DeleteContext(context);
    SDL_Quit();
