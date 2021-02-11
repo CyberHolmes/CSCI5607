@@ -168,7 +168,7 @@ void mouseClicked(float m_x, float m_y){
    do_translate = false;
    do_rotate = false;
    do_scale = false;
-   float d = 0.03; //in range radius   
+   float d = 0.02; //in range radius   
 
    if (numVertices == 4)
    {
@@ -203,7 +203,7 @@ void mouseClicked(float m_x, float m_y){
 }   
 
 void mouseDragged(float m_x, float m_y){
-   Point2D cur_mouse = Point2D(m_x,m_y);   
+   Point2D cur_mouse = Point2D(m_x,m_y);      
    
    if (do_translate){
       Dir2D disp = cur_mouse-clicked_mouse;
@@ -212,7 +212,7 @@ void mouseDragged(float m_x, float m_y){
    
    if (do_scale){
       //Compute the new size, g_size, based on the mouse positions
-      float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude(); 
+      float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude();       
       rect_scale = clicked_size*g_size;      
    }
    
@@ -220,7 +220,7 @@ void mouseDragged(float m_x, float m_y){
       //Compute the new angle, rect_angle, based on the mouse positions
       Line2D l1 = join(clicked_pos,clicked_mouse);
       Line2D l2 = join(clicked_pos,cur_mouse);
-      float d_angle = clamp(angle(l1,l2),0,3.14);      
+      float d_angle = angle(l1,l2);
       rect_angle = clicked_angle-sign(vee(cur_mouse,l1))*angle(l1,l2);      
    }
 
@@ -536,7 +536,8 @@ int main(int argc, char *argv[]){
    //Event Loop (Loop forever processing each event as fast as possible)
    SDL_Event windowEvent;
    bool done = false;
-   bool gammaOn = false;   
+   bool gammaOn = false;
+   bool brighten = true;
 
    while (!done){
       if (animateEnable)
@@ -552,11 +553,24 @@ int main(int argc, char *argv[]){
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) //If "r" is pressed
             r_keyPressed();
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "b" is pressed
+         {
             //Apply gamma correction to brighten image
+               // gammaOn? glDisable(GL_FRAMEBUFFER_SRGB):glEnable(GL_FRAMEBUFFER_SRGB);
+               // gammaOn = !gammaOn;
+            if (brighten)
+            {               
+               for (int i=0; i<4*img_w*img_h; i++){
+                  float tmp = (float)img_data[i]*1.5;
+                  img_data[i] = (unsigned char)(tmp>255?255:tmp);
+               }               
+            } else
             {
-               gammaOn? glDisable(GL_FRAMEBUFFER_SRGB):glEnable(GL_FRAMEBUFFER_SRGB);
-               gammaOn = !gammaOn;
+               img_data = loadImage(img_w,img_h);
             }
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_w, img_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+            brighten = !brighten;
+         }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
             numVertices = 3;
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
@@ -568,7 +582,7 @@ int main(int argc, char *argv[]){
             {
                srand(time(NULL));
                d_disp = Dir2D((float)(rand()%100)/100,(float)(rand()%100)/100);
-               d_angle = (float)(rand()%30+80)/100;
+               d_angle = (float)(rand()%30+80)/100;               
             }
          }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_m) //If "m" is pressed
@@ -601,10 +615,10 @@ int main(int argc, char *argv[]){
 
       if (showMulti)
       {
-         glDrawArrays(GL_TRIANGLE_STRIP, 4, 4); //Draw the two triangles (4 vertices) making up the square
-         glDrawArrays(GL_TRIANGLE_STRIP, 8, 4); //Draw the two triangles (4 vertices) making up the square
-         glDrawArrays(GL_TRIANGLE_STRIP, 12, 4); //Draw the two triangles (4 vertices) making up the square
-         glDrawArrays(GL_TRIANGLE_STRIP, 16, 4); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 4, numVertices); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 8, numVertices); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 12, numVertices); //Draw the two triangles (4 vertices) making up the square
+         glDrawArrays(GL_TRIANGLE_STRIP, 16, numVertices); //Draw the two triangles (4 vertices) making up the square
       }
       glDrawArrays(GL_TRIANGLE_STRIP, 0, numVertices); //Draw the two triangles (4 vertices) making up the square
 
