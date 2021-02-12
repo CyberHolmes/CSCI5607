@@ -218,7 +218,10 @@ void mouseDragged(float m_x, float m_y){
    
    if (do_scale){
       //Compute the new size, g_size, based on the mouse positions
-      float g_size = (cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude();       
+      Line2D l1 = join(clicked_pos,clicked_mouse);
+      Line2D l2 = join(clicked_pos,cur_mouse);
+      float d_angle = angle(l1,l2);
+      float g_size = d_angle > 1.570796? 0.01:(cur_mouse-clicked_pos).magnitude()/(clicked_mouse-clicked_pos).magnitude();
       rect_scale = clicked_size*g_size;      
    }
    
