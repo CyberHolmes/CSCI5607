@@ -65,10 +65,15 @@ Point2D origin = Point2D(0,0);
 // Point2D init_p2 = Point2D(vertices[7],vertices[8]);
 // Point2D init_p3 = Point2D(vertices[0],vertices[1]);
 // Point2D init_p4 = Point2D(vertices[14],vertices[15]);
-Point2D init_p3 = Point2D(vertices[21],vertices[22]);
-Point2D init_p4 = Point2D(vertices[7],vertices[8]);
-Point2D init_p1 = Point2D(vertices[0],vertices[1]);
-Point2D init_p2 = Point2D(vertices[14],vertices[15]);
+// Point2D init_p3 = Point2D(vertices[21],vertices[22]);
+// Point2D init_p4 = Point2D(vertices[7],vertices[8]);
+// Point2D init_p1 = Point2D(vertices[0],vertices[1]);
+// Point2D init_p2 = Point2D(vertices[14],vertices[15]);
+
+Point2D init_p4 = Point2D(vertices[21],vertices[22]);
+Point2D init_p3 = Point2D(vertices[7],vertices[8]);
+Point2D init_p2 = Point2D(vertices[0],vertices[1]);
+Point2D init_p1 = Point2D(vertices[14],vertices[15]);
 
 Point2D p1 = init_p1, p2 = init_p2, p3 = init_p3, p4 = init_p4;
 
@@ -106,6 +111,7 @@ float d_angle = 0.6;
 bool animateEnable = false;
 float dt = 0.015; //control how fast animation goes
 bool showMulti = false;
+bool brighten = false;
 
 //Done: Read from ASCII (P3) PPM files
 //Inputs are output variables for returning the image width and heigth
@@ -536,8 +542,7 @@ int main(int argc, char *argv[]){
    //Event Loop (Loop forever processing each event as fast as possible)
    SDL_Event windowEvent;
    bool done = false;
-   bool gammaOn = false;
-   bool brighten = true;
+   bool gammaOn = false;   
 
    while (!done){
       if (animateEnable)
@@ -554,9 +559,7 @@ int main(int argc, char *argv[]){
             r_keyPressed();
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "b" is pressed
          {
-            //Apply gamma correction to brighten image
-               // gammaOn? glDisable(GL_FRAMEBUFFER_SRGB):glEnable(GL_FRAMEBUFFER_SRGB);
-               // gammaOn = !gammaOn;
+            brighten = !brighten;
             if (brighten)
             {               
                for (int i=0; i<4*img_w*img_h; i++){
@@ -568,8 +571,7 @@ int main(int argc, char *argv[]){
                img_data = loadImage(img_w,img_h);
             }
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_w, img_h, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-            brighten = !brighten;
+            glGenerateMipmap(GL_TEXTURE_2D); 
          }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
             numVertices = 3;
