@@ -128,7 +128,6 @@ Image::Image (int width_, int height_){
 				data.raw[b++] = 0;
 			}
 		}
-
     assert(data.raw != NULL);
 }
 
@@ -166,7 +165,7 @@ Image::Image (char* fname){
 }
 
 Image::~Image (){
-    delete data.raw;
+    delete[] data.raw;
     data.raw = NULL;
 }
 
@@ -211,7 +210,7 @@ void Image::Brighten (double factor){
 //DONE - HW2: Crop an image to a rectangle starting at (x,y) with a width w and a height h
 Image* Image::Crop(int x, int y, int w, int h) {
 	/* WORK HERE */
-   Image *nimg = new Image(w,h);
+   Image *nimg = new Image(w,h);   
    int i,j;
    for (i=0;i<w;i++){
       for (j=0;j<h;j++){

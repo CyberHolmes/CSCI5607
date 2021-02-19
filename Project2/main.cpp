@@ -145,6 +145,33 @@ int main( int argc, char* argv[] ){
 				img->ChangeSaturation(factor);
 				argv += 2, argc -=2;
 			}
+			else if (!strcmp(*argv, "-randomDither")){
+				int nbits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				nbits = atoi(argv[1]);
+				img->RandomDither(nbits);
+				argv += 2, argc -= 2;
+			}
+			else if (!strcmp(*argv, "-orderedDither")){
+				int nbits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				nbits = atoi(argv[1]);
+				img->OrderedDither(nbits);
+				argv += 2, argc -= 2;
+			}
+			else if (!strcmp(*argv, "-FloydSteinbergDither")){
+				int nbits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				nbits = atoi(argv[1]);
+				img->FloydSteinbergDither(nbits);
+				argv += 2, argc -= 2;
+			}
 			else{
 				fprintf(stderr, "image: invalid option: %s\n", *argv);
 				ShowUsage();

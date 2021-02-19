@@ -67,7 +67,7 @@ Image::Image (char* fname){
 }
 
 Image::~Image (){
-    delete data.raw;
+    delete[] data.raw;
     data.raw = NULL;
 }
 
@@ -169,7 +169,7 @@ void Image::ChangeContrast (double factor){
 	for (x=0;x<Width();x++){
 		for (y=0;y<Height();y++){
 			Pixel p=GetPixel(x,y);
-			GetPixel(x,y)=Pixel(ComponentLerp(p.r,l_mean,factor),ComponentLerp(p.g,l_mean,factor),ComponentLerp(p.b,l_mean,factor),p.a);
+			GetPixel(x,y)=Pixel(ComponentLerp(l_mean,p.r,factor),ComponentLerp(l_mean,p.g,factor),ComponentLerp(l_mean,p.b,factor),p.a);
 		}
 	}
 }
@@ -181,7 +181,7 @@ void Image::ChangeSaturation(double factor){
 			Pixel p=GetPixel(x,y);
 			Component l=p.Luminance();
 			Pixel q= Pixel(l,l,l,255);
-			GetPixel(x,y)=PixelLerp(p,q,factor);
+			GetPixel(x,y)=PixelLerp(q,p,factor);
 		}
 	}
 }
@@ -189,7 +189,28 @@ void Image::ChangeSaturation(double factor){
 
 //For full credit, check that your dithers aren't making the pictures systematically brighter or darker
 void Image::RandomDither (int nbits){
-	/* WORK HERE */
+	int x,y;
+	int factor=2<<(8-nbits); //resolution of the quantizer
+	srand(time(NULL));
+   for (x=0;x<Width();x++){
+      for (y=0;y<Height();y++){
+         Pixel p = GetPixel(x,y);
+		//  Pixel noise=Pixel(rand()%factor,rand()%factor,rand()%factor,255); //factor;
+		//  noise = noise*0.5;
+		// // int new_r=(p.r+rand()%factor-factor/2)>0?p.r+rand()%factor-factor/2:0;
+		// // int new_g=(p.g+rand()%factor-factor/2)>0?p.g+rand()%factor-factor/2:0;
+		// // int new_b=(p.b+rand()%factor-factor/2)>0?p.b+rand()%factor-factor/2:0;
+		// //  Pixel new_p=Pixel(new_r,new_g,new_b,p.a);
+		// //   if (x==100 && y==100){
+		// // 	  printf("p=%d,%d,%d\n",p.r,p.g,p.b);
+		// // 	printf("new_p=%d,%d,%d\n",new_p.r,new_p.g,new_p.b);
+		// //  }
+        // //  GetPixel(x,y) = PixelQuant(new_p,nbits);
+		// GetPixel(x,y) = PixelQuant(p+noise,nbits);
+		Pixel new_p = Pixel(ComponentClamp(p.r+rand()%factor-factor/2),ComponentClamp(p.g+rand()%factor-factor/2),ComponentClamp(p.b+rand()%factor-factor/2),p.a);
+		GetPixel(x,y)=PixelQuant(new_p,nbits);
+      }
+   }
 }
 
 //This bayer method gives the quantization thresholds for an ordered dither.
@@ -203,9 +224,17 @@ static int Bayer4[4][4] ={
     { 0,  8,  2, 10}
 };
 
-
 void Image::OrderedDither(int nbits){
-	/* WORK HERE */
+	int x,y;
+	for (x=0;x<Width();x++){
+      	for (y=0;y<Height();y++){
+			Pixel p=GetPixel(x,y);
+			//Corresponding Bayer Matrix entry
+			float t=((float)Bayer4[x%4][y%4]/16-0.5)*255.0/nbits;
+			Pixel new_p=Pixel(ComponentClamp(p.r+(int)t),ComponentClamp(p.g+(int)t),ComponentClamp(p.b+(int)t),p.a);
+			GetPixel(x,y)=PixelQuant(new_p,nbits);
+		}
+	}
 }
 
 /* Error-diffusion parameters */
@@ -216,7 +245,36 @@ const double
     DELTA = 1.0 / 16.0;
 
 void Image::FloydSteinbergDither(int nbits){
-	/* WORK HERE */
+	int x,y;
+	for (x=1;x<Width()-1;x++){
+      	for (y=0;y<Height()-1;y++){
+			Pixel p=GetPixel(x,y);
+			Pixel neighbor1=GetPixel(x+1,y);
+			Pixel neighbor2=GetPixel(x-1,y+1);
+			Pixel neighbor3=GetPixel(x,y+1);
+			Pixel neighbor4=GetPixel(x+1,y+1);
+			Pixel new_p=PixelQuant(p,nbits);
+			int err_r=p.r-new_p.r;
+			int err_g=p.g-new_p.g;
+			int err_b=p.b-new_p.b;	
+			GetPixel(x,y)=new_p;
+			GetPixel(x+1,y  )=Pixel(ComponentClamp(neighbor1.r+err_r*ALPHA),ComponentClamp(neighbor1.g+err_g*ALPHA),ComponentClamp(neighbor1.b+err_b*ALPHA),neighbor1.a);
+			GetPixel(x-1,y+1)=Pixel(ComponentClamp(neighbor2.r+err_r*BETA),ComponentClamp(neighbor2.g+err_g*BETA),ComponentClamp(neighbor2.b+err_b*BETA),neighbor2.a);
+			GetPixel(x  ,y+1)=Pixel(ComponentClamp(neighbor3.r+err_r*GAMMA),ComponentClamp(neighbor3.g+err_g*GAMMA),ComponentClamp(neighbor3.b+err_b*GAMMA),neighbor3.a);
+			GetPixel(x+1,y+1)=Pixel(ComponentClamp(neighbor4.r+err_r*DELTA),ComponentClamp(neighbor4.g+err_g*DELTA),ComponentClamp(neighbor4.b+err_b*DELTA),neighbor4.a);
+		}
+	}
+	//Border
+	for (y=0;y<Height();y++){
+		Pixel p=GetPixel(0,y);
+		GetPixel(0,y)=PixelQuant(p,nbits);
+		p=GetPixel(Width()-1,y);
+		GetPixel(Width()-1,y)=PixelQuant(p,nbits);
+	}
+	for (x=0;x<Width()-1;x++){
+      	Pixel p=GetPixel(x,Height()-1);
+		GetPixel(x,Height()-1)=PixelQuant(p,nbits);
+	}
 }
 
 void Image::Blur(int n){
