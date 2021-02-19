@@ -209,7 +209,10 @@ void Image::Brighten (double factor){
 
 //DONE - HW2: Crop an image to a rectangle starting at (x,y) with a width w and a height h
 Image* Image::Crop(int x, int y, int w, int h) {
-	/* WORK HERE */
+   x = (x<0)? 0 : (x>Width())? (Width()-1):x;
+   y = (y<0)? 0 : (y>Height())? (Height()-1):y;
+   w = (w<0)? 0 : (w>Width())? Width():w;
+   h = (h<0)? 0 : (h>Height())? Height():h;
    Image *nimg = new Image(w,h);   
    int i,j;
    for (i=0;i<w;i++){
@@ -223,7 +226,6 @@ Image* Image::Crop(int x, int y, int w, int h) {
 
 //DONE - HW2: Keep only non-zero red, green, or blue components for the channel value 0, 1, and 2 respectively
 void Image::ExtractChannel(int channel) {
-	/* WORK HERE */
    uint8_t data[] = {0,0,0,1};
    data[channel] = 1;
    Pixel q = Pixel(data);
@@ -241,7 +243,6 @@ void Image::ExtractChannel(int channel) {
 //DONE - HW2: Quantize the intensities stored for each pixel's values into 2^nbits possible equally-spaced values
 //DONE - HW2: You may find a very helpful function in the pixel class!
 void Image::Quantize (int nbits) {
-	/* WORK HERE */
    int x,y;
    for (x=0;x<Width();x++){
       for (y=0;y<Height();y++){

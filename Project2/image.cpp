@@ -277,11 +277,31 @@ void Image::FloydSteinbergDither(int nbits){
 	}
 }
 
+static float GaussianKernel[7] = {
+	0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+};
+
+float convolve(const float* a, const float* b, int r, int i){
+	float s=0;
+	int j;
+	for (j=-r;j<r+1;j++){
+		s += a[j+r]*b[i-j];
+	}
+	return r;
+}
+
 void Image::Blur(int n){
    // float r, g, b; //I got better results converting everything to floats, then converting back to bytes
 	// Image* img_copy = new Image(*this); //This is will copying the image, so you can read the orginal values for filtering (
                                           //  ... don't forget to delete the copy!
-	/* WORK HERE */
+	float r,g,b;
+	Image* img_copy=new Image(*this);
+	int x,y;
+	for (x=0;x<Width();x++){
+      	for (y=0;y<Height();y++){
+
+		}
+	}
 }
 
 void Image::Sharpen(int n){
