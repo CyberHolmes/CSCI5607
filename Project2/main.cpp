@@ -178,7 +178,7 @@ int main( int argc, char* argv[] ){
 				if (img == NULL) ShowUsage();
 
 				nbits = atoi(argv[1]);
-				img->Blur2D(nbits);
+				img->Blur1D(nbits);
 				argv += 2, argc -= 2;
 			}
 			else if (!strcmp(*argv, "-sharpen")){
@@ -189,6 +189,27 @@ int main( int argc, char* argv[] ){
 				nbits = atoi(argv[1]);
 				img->Sharpen(nbits);
 				argv += 2, argc -= 2;
+			}
+			else if (!strcmp(*argv, "-edgeDetect")){
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				img->EdgeDetect();
+				argv += 1, argc -= 1;
+			}
+			else if (!strcmp(*argv, "-scale")){
+				int nbits;
+				double sx,sy;				
+				CheckOption(*argv, argc, 3);
+				if (img == NULL) ShowUsage();
+
+				sx = atof(argv[1]);
+				sy = atof(argv[2]);
+
+				Image *dst = img->Scale(sx,sy);
+				delete img;
+				img = dst;
+				argv += 3, argc -= 3;
 			}
 			else{
 				fprintf(stderr, "image: invalid option: %s\n", *argv);
