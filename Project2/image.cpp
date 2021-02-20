@@ -11,6 +11,8 @@
 #include <fstream>
 using namespace std;
 
+#define PI 3.1415 
+
 /**
  * Image
  **/
@@ -46,8 +48,8 @@ Image::Image (const Image& src){
 	
 	data.raw = new uint8_t[num_pixels*4];
 	
-	//memcpy(data.raw, src.data.raw, num_pixels);
-	*data.raw = *src.data.raw;
+	memcpy(data.raw, src.data.raw, num_pixels*sizeof(Pixel));
+	// *data.raw = *src.data.raw;
 }
 
 Image::Image (char* fname){
@@ -131,6 +133,10 @@ void Image::Quantize (int nbits){
 }
 
 Image* Image::Crop(int x, int y, int w, int h){
+	x = (x<0)? 0 : (x>Width())? (Width()-1):x;
+   y = (y<0)? 0 : (y>Height())? (Height()-1):y;
+   w = (w<0)? 0 : (w>Width())? Width():w;
+   h = (h<0)? 0 : (h>Height())? Height():h;
 	Image *nimg = new Image(w,h);
 	int i,j;
 	for (i=0;i<w;i++){
@@ -277,35 +283,185 @@ void Image::FloydSteinbergDither(int nbits){
 	}
 }
 
-static float GaussianKernel[7] = {
-	0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-};
+// static float GaussianKernel[7] = {
+// 	0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
+// };
 
-float convolve(const float* a, const float* b, int r, int i){
+void GaussianFilter(float* kernel, int n){
+	float sigma=(2*n+1)/3; //sigma
+	float p,q=2.0*sigma*sigma;
 	float s=0;
-	int j;
-	for (j=-r;j<r+1;j++){
-		s += a[j+r]*b[i-j];
+	int i;
+	for (i=-n;i<=n;i++){
+		p = i*i;
+		kernel[i+n]=(exp(-p/q)/(PI*q));
+		s += kernel[i+n];
 	}
-	return r;
+	for (i=-n;i<=n;i++){
+		kernel[i+n] /= s;
+	}
 }
 
-void Image::Blur(int n){
-   // float r, g, b; //I got better results converting everything to floats, then converting back to bytes
-	// Image* img_copy = new Image(*this); //This is will copying the image, so you can read the orginal values for filtering (
-                                          //  ... don't forget to delete the copy!
-	float r,g,b;
-	Image* img_copy=new Image(*this);
-	int x,y;
-	for (x=0;x<Width();x++){
-      	for (y=0;y<Height();y++){
+float convolve1D(const float* filter, const float* data, int n, int x, int xl){
+	int i,ix;
+	float s=0;
+	float a,b;
+	for (i=-n;i<=n;i++){
+		a=filter[i+n];
+		// ix = (x<n)?n-x : (x>(xl-n-1))? (2*xl-x-n-1) : x+i;
+		ix = (x<n)?n : (x>(xl-n-1))? (xl-n-1) : x+i;
+		b = data[ix];
+		s += a*b;
+	}
+	return s;
+}
 
+void Image::Blur1D(int n){	
+	int w=Width(), h=Height();
+	n = (n<1)? 1 : (n>min(w,h)/2)? min(w,h)/2:n;
+	Image* img_copy=new Image(*this);
+	int l=2*n+1;
+	float* kernel = new float[l];
+	GaussianFilter(kernel,n);
+	// for (int i=0;i<l;i++){
+	// 	printf("%f, ",kernel[i]);
+	// }
+	// printf("\n");
+	int x,y;
+	for (y=0;y<Height();y++){
+		float r[w],g[w],b[w];
+		float r_new,g_new,b_new;
+		for (x=0;x<Width();x++){      	
+			Pixel p = img_copy->GetPixel(x,y);
+			r[x]=(float)p.r;
+			g[x]=(float)p.g;
+			b[x]=(float)p.b;			
+		}
+		for (x=0;x<Width();x++){ 
+			Pixel p = img_copy->GetPixel(x,y);
+			r_new=convolve1D(kernel,r,n,x,w);
+			g_new=convolve1D(kernel,g,n,x,w);
+			b_new=convolve1D(kernel,b,n,x,w);
+			GetPixel(x,y)=Pixel(r_new,g_new,b_new,p.a);
 		}
 	}
+	//printf("row convolution completed.\n");
+	img_copy=new Image(*this);
+	//printf("start column.\n");
+	for (x=0;x<Width();x++){
+		float r[h],g[h],b[h];
+		float r_new,g_new,b_new;
+		for (y=0;y<Height();y++){      	
+			Pixel p = img_copy->GetPixel(x,y);
+			r[y]=(float)p.r;
+			g[y]=(float)p.g;
+			b[y]=(float)p.b;
+		}
+		for (y=0;y<Height();y++){ 
+			Pixel p = img_copy->GetPixel(x,y);
+			r_new=convolve1D(kernel,r,n,y,h);
+			g_new=convolve1D(kernel,g,n,y,h);
+			b_new=convolve1D(kernel,b,n,y,h);
+			GetPixel(x,y)=Pixel(r_new,g_new,b_new,p.a);
+		}
+	}
+	delete img_copy, kernel;
+	img_copy = NULL;
+	kernel = NULL;
+}
+
+void GaussianFilter2D(float* kernel, int n){
+	float sigma=(2*n+1)/3; //sigma
+	float p,q=2.0*sigma*sigma;
+	float s=0;
+	int i,j;
+	for (i=-n;i<=n;i++){
+        for(j=-n;j<=n;j++){
+            p = i*i+j*j;
+            int idx = (i+n)*(2*n+1)+j+n;
+            kernel[idx]=(exp(-p/q)/(PI*q));
+            s += kernel[idx];
+        }
+	}
+	for (i=-n;i<=n;i++){
+        for(j=-n;j<=n;j++){
+            int idx = (i+n)*(2*n+1)+j+n;
+            kernel[idx] /= s;
+        }
+	}
+}
+
+float convolve2D(const float* filter, const float* data, int n, int x, int y, int xl, int yl){
+	int i,j,idxa,idxb,ix,iy;
+	float s=0;
+	float a,b;
+	for (i=-n;i<n+1;i++){
+		for (j=-n;j<n+1;j++){
+			idxa = (i+n)*(2*n+1)+j+n;
+			a=filter[idxa];
+			ix = (x<=n)?n-x : (x>=(xl-n-1))? (2*xl-x-n-1) : x+i;
+			iy = (y<=n)?n-y:(y>=(yl-n-1))?(2*yl-y-n-1):y+j;
+			// ix = (x<=n)?n : (x>=(xl-n-1))? (xl-n-1) : x+i;
+			// iy = (y<=n)?n:(y>=(yl-n-1))?(yl-n-1):y+j;
+			idxb = ix+iy*xl;
+			b=data[idxb];
+			s += a*b;
+		}
+	}
+	return s;
+}
+
+void Image::Blur2D(int n){	
+	int w=Width(), h=Height();
+	n = (n<1)? 1 : (n>min(w,h)/2)? min(w,h)/2:n;
+	// Image* img_copy=new Image(*this);
+	int l=2*n+1;
+	float* kernel = new float[l*l];
+	GaussianFilter2D(kernel,n);
+	int x,y,idx;
+	float* r = new float[w*h];
+	float* g = new float[w*h];
+	float* b = new float[w*h];
+	float r_new, g_new, b_new;
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){	
+			Pixel p = GetPixel(x,y);
+			idx = y*w+x;
+			r[idx] = p.r;
+			g[idx] = p.g;
+			b[idx] = p.b;
+		}
+	}
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){
+			Pixel p = GetPixel(x,y);
+			r_new=convolve2D(kernel,r,n,x,y,w,h);
+			g_new=convolve2D(kernel,g,n,x,y,w,h);
+			b_new=convolve2D(kernel,b,n,x,y,w,h);
+			GetPixel(x,y)=Pixel(r_new,g_new,b_new,p.a);
+		}
+	}
+	//printf("row convolution completed.\n");
+	delete kernel, r, g, b;
+	kernel = nullptr;
+	r = nullptr;
+	g = nullptr;
+	b = nullptr;
 }
 
 void Image::Sharpen(int n){
-	/* WORK HERE */
+	int w=Width(), h=Height();
+	n = (n<1)? 1 : (n>min(w,h)/2)? min(w,h)/2:n;
+	Image* img_blur=new Image(*this);
+	img_blur->Blur(n);
+	int x,y;
+	for (x=0;x<Width();x++){
+		for (y=0;y<Height();y++){
+			Pixel p=GetPixel(x,y);
+			Pixel q=img_blur->GetPixel(x,y);
+			GetPixel(x,y)=PixelLerp(q,p,3);
+		}
+	}
 }
 
 void Image::EdgeDetect(){

@@ -127,6 +127,8 @@ public:
 
     // Blurs an image with an n x n Gaussian filter.
     void Blur(int n);
+    void Blur1D(int n);
+    void Blur2D(int n);
 
 	// Sharpens an image by blurring with an n x n Gaussian filter and then extrapolating
     void Sharpen(int n);

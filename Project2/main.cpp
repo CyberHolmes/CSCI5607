@@ -172,6 +172,24 @@ int main( int argc, char* argv[] ){
 				img->FloydSteinbergDither(nbits);
 				argv += 2, argc -= 2;
 			}
+			else if (!strcmp(*argv, "-blur")){
+				int nbits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				nbits = atoi(argv[1]);
+				img->Blur2D(nbits);
+				argv += 2, argc -= 2;
+			}
+			else if (!strcmp(*argv, "-sharpen")){
+				int nbits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				nbits = atoi(argv[1]);
+				img->Sharpen(nbits);
+				argv += 2, argc -= 2;
+			}
 			else{
 				fprintf(stderr, "image: invalid option: %s\n", *argv);
 				ShowUsage();
