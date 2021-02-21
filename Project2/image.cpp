@@ -482,27 +482,34 @@ Image* Image::Scale(double sx, double sy){
 	int new_h = sy*Height();
 	Image* img_new = new Image(new_w,new_h);
 	int x,y;
-	/* IMAGE_SAMPLING_POINT,
-    IMAGE_SAMPLING_BILINEAR,
-    IMAGE_SAMPLING_GAUSSIAN,
-    IMAGE_N_SAMPLING_METHODS */
-
-	SetSamplingMethod(IMAGE_SAMPLING_BILINEAR);
 	for (x=0;x<new_w;x++){
 		for (y=0;y<new_h;y++){
 			float u=x/sx,v=y/sy;
 			img_new->GetPixel(x,y)=Sample(u,v);
 		}
 	}
-	// *this = *img_new;
-	// delete img_new;
-	// img_new=nullptr;
 	return img_new;
 }
 
 Image* Image::Rotate(double angle){
-	/* WORK HERE */
-	return NULL;
+	float a = angle*PI/180;
+	float cos_th = cos(a);
+	float sin_th = sin(a);
+	int new_w = Width()*abs(cos_th)+Height()*abs(sin_th);
+	int new_h = Width()*abs(sin_th)+Height()*abs(cos_th);
+	Image* img_new = new Image(new_w,new_h);
+	int x,y;
+	for (x=0;x<new_w;x++){
+		for (y=0;y<new_h;y++){
+			float u,v;
+			u = (x-new_w/2)*cos_th+(y-new_h/2)*sin_th+Width()/2;
+			v = -(x-new_w/2)*sin_th+(y-new_h/2)*cos_th+Height()/2;
+			if (u>=0 && v>=0 && u<Width() && v<Height()){
+			img_new->GetPixel(x,y)=Sample(u,v);
+			}
+		}
+	}
+	return img_new;
 }
 
 void Image::Fun(){
@@ -528,32 +535,29 @@ Pixel Image::Sample (double u, double v){
 			int x1,x2,y1,y2;
 			float a1,a2,b1,b2;
 			if (u>=Width()-1){
-				x1=Width()-1;
+				x1=Width()-2;
 				x2=Width()-1;
-				a1=0;
-				a2=0;
 			} else {
 				x1=u;
-				x2=u+1;
-				a1 = (x2-u)/(x2-x1);
-				a2 = (u-x1)/(x2-x1);
+				x2=u+1;				
 			}
 			if (v>=Height()-1){
-				y1=Height()-1;
+				y1=Height()-2;
 				y2=Height()-1;
-				b1=0;
-				b2=0;
 			} else {
 				y1=v;
-				y2=v+1;
-				b1 = (y2-v)/(y2-y1);
-				b2 = (v-y1)/(y2-y1);
+				y2=v+1;				
 			}
+			a1 = (x2-u)/(x2-x1);
+			a2 = (u-x1)/(x2-x1);
+			b1 = (y2-v)/(y2-y1);
+			b2 = (v-y1)/(y2-y1);
 			Pixel p11 = GetPixel(x1,y1);
 			Pixel p12 = GetPixel(x1,y2);
 			Pixel p21 = GetPixel(x2,y1);
 			Pixel p22 = GetPixel(x2,y2);
-			return (b1*(a1*p11+a2*p21)+b2*(a1*p12+a2*p22));			
+			float c1=a1*b1, c2=a2*b1, c3=a1*b2, c4=a2*b2;
+			return p11*c1+p21*c2+p12*c3+p22*c4;			
 			break;
 		}
 		case IMAGE_SAMPLING_GAUSSIAN:{
@@ -568,8 +572,6 @@ Pixel Image::Sample (double u, double v){
 			break;
 		}
 		case IMAGE_N_SAMPLING_METHODS:
-		//
-			break;
 		case IMAGE_SAMPLING_POINT:
 		default:
 			int x=(round(u)>Width()-1)?Width()-1:round(u);

@@ -211,6 +211,39 @@ int main( int argc, char* argv[] ){
 				img = dst;
 				argv += 3, argc -= 3;
 			}
+			else if (!strcmp(*argv, "-rotate"))
+			{
+				double angle;
+				Image *dst;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				angle = atof(argv[1]);
+				dst = img->Rotate(angle);
+				delete img;
+				img = dst;
+				dst = NULL;
+				argv += 2, argc -= 2;
+			}
+
+			else if (!strcmp(*argv, "-fun"))
+			{
+				if (img == NULL) ShowUsage();
+
+				img->Fun();
+				argv++, argc--;
+			}
+
+			else if (!strcmp(*argv, "-sampling"))
+			{
+				if (img == NULL) ShowUsage();
+
+				int method;
+				CheckOption(*argv, argc, 2);
+				method = atoi(argv[1]);
+				img->SetSamplingMethod(method);
+				argv += 2, argc -= 2;
+			}
 			else{
 				fprintf(stderr, "image: invalid option: %s\n", *argv);
 				ShowUsage();
