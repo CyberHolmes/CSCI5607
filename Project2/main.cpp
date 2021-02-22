@@ -173,12 +173,12 @@ int main( int argc, char* argv[] ){
 				argv += 2, argc -= 2;
 			}
 			else if (!strcmp(*argv, "-blur")){
-				int nbits;
+				int n;
 				CheckOption(*argv, argc, 2);
 				if (img == NULL) ShowUsage();
 
-				nbits = atoi(argv[1]);
-				img->Blur1D(nbits);
+				n = atoi(argv[1]);
+				img->Blur(n);
 				argv += 2, argc -= 2;
 			}
 			else if (!strcmp(*argv, "-sharpen")){
