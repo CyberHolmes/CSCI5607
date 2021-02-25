@@ -12,7 +12,7 @@
 using namespace std;
 
 #define PI 3.1415 
-#define DEBUG
+// #define DEBUG
 
 /**
  * Image
@@ -47,7 +47,7 @@ Image::Image (const Image& src){
 	num_pixels      = width * height;
 	sampling_method = IMAGE_SAMPLING_POINT;
 	
-	data.raw = new uint8_t[num_pixels*4];
+	data.raw = new uint8_t[num_pixels*sizeof(Pixel)];
 	
 	memcpy(data.raw, src.data.raw, num_pixels*sizeof(Pixel));
 	// *data.raw = *src.data.raw;
@@ -55,18 +55,23 @@ Image::Image (const Image& src){
 
 Image::Image (char* fname){
 
-	int lastc = strlen(fname);
-   int numComponents; //(e.g., Y, YA, RGB, or RGBA)
-   data.raw = stbi_load(fname, &width, &height, &numComponents, 4);
-	
-	if (data.raw == NULL){
-		printf("Error loading image: %s", fname);
-		exit(-1);
+	int numComponents; //(e.g., Y, YA, RGB, or RGBA)
+
+	//Load the pixels with STB Image Lib
+	uint8_t* loadedPixels = stbi_load(fname, &width, &height, &numComponents, 4);
+	if (loadedPixels == NULL){
+	printf("Error loading image: %s", fname);
+	exit(-1);
 	}
-	
+
+	//Set image member variables
 	num_pixels = width * height;
 	sampling_method = IMAGE_SAMPLING_POINT;
 	
+	 //Copy the loaded pixels into the image data structure
+	data.raw = new uint8_t[num_pixels*sizeof(Pixel)];
+	memcpy(data.raw, loadedPixels, num_pixels*sizeof(Pixel));
+	free(loadedPixels);
 }
 
 Image::~Image (){
@@ -166,22 +171,54 @@ void Image::AddNoise (double factor){
 			rs0+=p.r/255;gs0+=p.g/255;bs0+=p.b/255;
 			l+=p.Luminance()/255;
 			#endif
-			// Pixel new_p=PixelRandom();
-			// GetPixel(x,y)=p+(new_p*factor);
-			int amp = 511*factor;
-			int amp2 = amp/2;
-			int noise = rand()%amp-amp2;			
-			int new_r=p.r+noise;
-			int new_g=p.g+noise;
-			int new_b=p.b+noise;
-			new_r=(new_r<0)?0:(new_r>255)?255:new_r;
-			new_g=(new_g<0)?0:(new_g>255)?255:new_g;
-			new_b=(new_b<0)?0:(new_b>255)?255:new_b;
-			GetPixel(x,y)=Pixel(new_r,new_g,new_b,p.a);
+			Pixel q=PixelRandom();
+			GetPixel(x,y)=PixelLerp(p,q,factor);
 			#ifdef DEBUG
-			rs+=new_r/255;gs+=new_g/255;bs+=new_b/255;	
+			rs+=GetPixel(x,y).r/255;gs+=GetPixel(x,y).g/255;bs+=GetPixel(x,y).b/255;	
 			l+=GetPixel(x,y).Luminance()/255;	
-			ns +=noise;	
+			ns +=q.r/255;	
+			#endif
+		}
+	}
+	#ifdef DEBUG
+	printf("factor=%f, noise avg=%f\n",factor,ns/NumPixels());
+	printf("Original image: r=%f, g=%f, b=%f, l=%f\n",rs0/NumPixels(),gs0/NumPixels(),bs0/NumPixels(),l0/NumPixels());
+	printf("New image: r=%f, g=%f, b=%f, l=%f\n",rs/NumPixels(),gs/NumPixels(),bs/NumPixels(),l/NumPixels());
+	#endif
+}
+
+void Image::AddNoiseSaltPepper (double factor){
+	// srand(time(NULL));
+	// int noise[4] = {rand()%256*factor,rand()%256*factor,rand()%256*factor,0}; //generate a noise vector, assuming 8 bit
+	int x,y;
+	#ifdef DEBUG
+	float rs0=0,gs0=0,bs0=0,rs=0,bs=0,gs=0; //sum of r,g,b of original and new image
+	float l=0,l0=0,ns=0;
+	#endif
+	srand(time(NULL));
+	for (x=0;x<Width();x++){
+		for (y=0;y<Height();y++){
+			Pixel p=GetPixel(x,y);
+			#ifdef DEBUG			
+			rs0+=p.r/255;gs0+=p.g/255;bs0+=p.b/255;
+			l+=p.Luminance()/255;
+			#endif
+			if (rand()%100<factor*100){
+				if (rand()%2==0){
+					GetPixel(x,y)=Pixel(0,0,0,p.a);
+					#ifdef DEBUG
+					ns -=1;
+					#endif
+				} else {
+					GetPixel(x,y)=Pixel(255,255,255,p.a);
+					#ifdef DEBUG
+					ns +=1;
+					#endif
+				}
+			}
+			#ifdef DEBUG
+			rs+=GetPixel(x,y).r/255;gs+=GetPixel(x,y).g/255;bs+=GetPixel(x,y).b/255;	
+			l+=GetPixel(x,y).Luminance()/255;	
 			#endif
 		}
 	}
@@ -231,6 +268,7 @@ void Image::ChangeSaturation(double factor){
 void Image::RandomDither (int nbits){
 	int x,y;
 	int factor=2<<(8-nbits); //resolution of the quantizer
+	float r=1.0-(float)nbits/(float)8;
 	srand(time(NULL));
 	#ifdef DEBUG
 	float rs0=0,gs0=0,bs0=0,rs=0,bs=0,gs=0; //sum of r,g,b of original and new image
@@ -243,21 +281,7 @@ void Image::RandomDither (int nbits){
 			rs0+=p.r/255;gs0+=p.g/255;bs0+=p.b/255;
 			l+=p.Luminance()/255;
 		#endif
-		//  Pixel noise=Pixel(rand()%factor,rand()%factor,rand()%factor,255); //factor;
-		//  noise = noise*0.5;
-		// // int new_r=(p.r+rand()%factor-factor/2)>0?p.r+rand()%factor-factor/2:0;
-		// // int new_g=(p.g+rand()%factor-factor/2)>0?p.g+rand()%factor-factor/2:0;
-		// // int new_b=(p.b+rand()%factor-factor/2)>0?p.b+rand()%factor-factor/2:0;
-		// //  Pixel new_p=Pixel(new_r,new_g,new_b,p.a);
-		// //   if (x==100 && y==100){
-		// // 	  printf("p=%d,%d,%d\n",p.r,p.g,p.b);
-		// // 	printf("new_p=%d,%d,%d\n",new_p.r,new_p.g,new_p.b);
-		// //  }
-        // //  GetPixel(x,y) = PixelQuant(new_p,nbits);
-		// GetPixel(x,y) = PixelQuant(p+noise,nbits);
-		int noise = rand()%factor-factor/2;
-		Pixel new_p = Pixel(ComponentClamp(p.r+noise),ComponentClamp(p.g+noise),ComponentClamp(p.b+noise),p.a);
-		// Pixel new_p = Pixel(ComponentClamp(p.r+rand()%factor-factor/2),ComponentClamp(p.g+rand()%factor-factor/2),ComponentClamp(p.b+rand()%factor-factor/2),p.a);
+		Pixel new_p = Pixel(ComponentClamp(p.r+rand()%factor-factor/2),ComponentClamp(p.g+rand()%factor-factor/2),ComponentClamp(p.b+rand()%factor-factor/2),p.a);
 		GetPixel(x,y)=PixelQuant(new_p,nbits);
 		#ifdef DEBUG
 			rs+=GetPixel(x,y).r/255;gs+=GetPixel(x,y).g/255;bs+=GetPixel(x,y).b/255;	
@@ -336,10 +360,7 @@ void Image::FloydSteinbergDither(int nbits){
 	}
 }
 
-// static float GaussianKernel[7] = {
-// 	0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006
-// };
-
+//Generate a 1D Gaussian filter of size n
 void GaussianFilter1D(float* kernel, int n){
 	float sigma=n/3; //sigma
 	float p,q=2.0*sigma*sigma;
@@ -349,7 +370,7 @@ void GaussianFilter1D(float* kernel, int n){
 	if (n>1){
 		for (i=-m;i<=m;i++){
 			p = i*i;
-			kernel[i+m]=(exp(-p/q)/(PI*q));
+			kernel[i+m]=(exp(-p/q)/sqrt(PI*q));
 			s += kernel[i+m];
 		}
 		for (i=-m;i<=m;i++){
@@ -360,31 +381,27 @@ void GaussianFilter1D(float* kernel, int n){
 	}
 }
 
-float convolve1D(const float* filter, const float* data, int n, int x, int w){
-	int i,ix;
-	float s=0;
-	float a,b;
-	int m=(n-1)/2;
-	for (i=-m;i<=m;i++){
-		a=filter[i+m];
-		// ix = (x<n)?n-x : (x>(xl-n-1))? (2*xl-x-n-1) : x+i;
-		// ix = (x<n)?n : (x>(xl-n-1))? (xl-n-1) : x+i;
-		ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
-		b = data[ix];
-		s += a*b;
-	}
-	return s;
-}
+// float convolve1D(const float* filter, const float* data, int n, int x, int w){
+// 	int i,ix;
+// 	float s=0;
+// 	float a,b;
+// 	int m=(n-1)/2;
+// 	for (i=-m;i<=m;i++){
+// 		a=filter[i+m];
+// 		// ix = (x<n)?n-x : (x>(xl-n-1))? (2*xl-x-n-1) : x+i;
+// 		// ix = (x<n)?n : (x>(xl-n-1))? (xl-n-1) : x+i;
+// 		ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
+// 		b = data[ix];
+// 		s += a*b;
+// 	}
+// 	return s;
+// }
 
-void Image::Blur(int n){	
-	int w=Width(), h=Height();
-	assert(n%2!=0);
-	int m=(n-1)/2;
-	n = (n<1)? 1 : (n>min(w,h))? min(w,h):n;
+void Image::ConvolveRow(const float* kernel, int n, int c){
 	Image* img_copy=new Image(*this);
-	float* kernel = new float[n];
-	GaussianFilter1D(kernel,n);
+	int w=Width(), h=Height();
 	int x,y,i,j,ix,iy;
+	int m=(n-1)/2;
 	for (y=0;y<Height();y++){		
 		for (x=0;x<Width();x++){ 
 			float k,r=0,g=0,b=0;
@@ -396,12 +413,22 @@ void Image::Blur(int n){
 				g+=k*(float)p.g;
 				b+=k*(float)p.b;
 			}
+			r=(r<0)?-r*c:(r>255)?255:r;
+			g=(g<0)?-g*c:(g>255)?255:g;
+			b=(b<0)?-b*c:(b>255)?255:b;
 			GetPixel(x,y)=Pixel(r,g,b,img_copy->GetPixel(x,y).a);
+			// GetPixel(x,y)=Pixel(ComponentClamp(r),ComponentClamp(g),ComponentClamp(b),img_copy->GetPixel(x,y).a);
 		}
 	}
-	//printf("row convolution completed.\n");
-	img_copy=new Image(*this);
-	//printf("start column.\n");
+	delete img_copy;
+	img_copy = NULL;
+}
+
+void Image::ConvolveCol(const float* kernel, int n, int c){
+	Image* img_copy=new Image(*this);
+	int w=Width(), h=Height();
+	int x,y,i,j,ix,iy;
+	int m=(n-1)/2;
 	for (x=0;x<Width();x++){		
 		for (y=0;y<Height();y++){ 
 			float k,r=0,g=0,b=0;
@@ -413,11 +440,28 @@ void Image::Blur(int n){
 				g+=k*(float)p.g;
 				b+=k*(float)p.b;
 			}
+			r=(r<0)?-r*c:(r>255)?255:r;
+			g=(g<0)?-g*c:(g>255)?255:g;
+			b=(b<0)?-b*c:(b>255)?255:b;
 			GetPixel(x,y)=Pixel(r,g,b,img_copy->GetPixel(x,y).a);
+			// GetPixel(x,y)=Pixel(ComponentClamp(r),ComponentClamp(g),ComponentClamp(b),img_copy->GetPixel(x,y).a);
 		}
 	}
-	delete img_copy, kernel;
+	delete img_copy;
 	img_copy = NULL;
+}
+
+void Image::Blur(int n){	
+	int w=Width(), h=Height();	
+	assert(n%2!=0);	
+	n = (n<1)? 1 : (n>min(w,h))? min(w,h):n;
+	
+	float* kernel = new float[n];
+	GaussianFilter1D(kernel,n);
+	ConvolveRow(kernel,n,0);
+	ConvolveCol(kernel,n,0);
+	
+	delete kernel;
 	kernel = NULL;
 }
 
@@ -430,7 +474,7 @@ void GaussianFilter2D(float* kernel, int n, float sigma){
 			for(j=-m;j<=m;j++){
 				p = i*i+j*j;
 				int idx = (i+m)*(2*m+1)+j+m;
-				kernel[idx]=(exp(-p/q)/(PI*q));
+				kernel[idx]=(exp(-p/q)/sqrt(PI*q));
 				s += kernel[idx];
 			}
 		}
@@ -445,30 +489,29 @@ void GaussianFilter2D(float* kernel, int n, float sigma){
 	}
 }
 
-float convolve2D(const float* filter, const float* data, int n, int x, int y, int w, int h){
-	int i,j,idxa,idxb,ix,iy;
-	float s=0;
-	float a,b;
-	int m=(n-1)/2;
-	for (i=-m;i<m+1;i++){
-		for (j=-m;j<m+1;j++){
-			idxa = (i+m)*(2*m+1)+j+m;
-			a=filter[idxa];
-			ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
-			iy = (y+j<=0)?-y-j : (y+j>(h-1))? (2*h-2-y-j):y+j;
-			idxb = ix+iy*w;
-			b=data[idxb];
-			s += a*b;
-		}
-	}
-	return s;
-}
+// float convolve2D(const float* filter, const float* data, int n, int x, int y, int w, int h){
+// 	int i,j,idxa,idxb,ix,iy;
+// 	float s=0;
+// 	float a,b;
+// 	int m=(n-1)/2;
+// 	for (i=-m;i<m+1;i++){
+// 		for (j=-m;j<m+1;j++){
+// 			idxa = (i+m)*(2*m+1)+j+m;
+// 			a=filter[idxa];
+// 			ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
+// 			iy = (y+j<=0)?-y-j : (y+j>(h-1))? (2*h-2-y-j):y+j;
+// 			idxb = ix+iy*w;
+// 			b=data[idxb];
+// 			s += a*b;
+// 		}
+// 	}
+// 	return s;
+// }
 
-Pixel convolve2DPixel(const float* filter, const Image& img, int n, int x, int y){
+Pixel convolve2DPixel(const float* filter, const Image& img, int n, int x, int y, int c){
 	int i,j,ik,ix,iy;
 	int w = img.Width();
 	int h = img.Height();
-	// Pixel ps=Pixel(0,0,0,img.GetPixel(x,y).a);
 	float k,r=0,g=0,b=0;
 	int m=(n-1)/2;
 	for (i=-m;i<=m;i++){
@@ -477,37 +520,36 @@ Pixel convolve2DPixel(const float* filter, const Image& img, int n, int x, int y
 			k=filter[ik];
 			ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
 			iy = (y+j<=0)?-y-j : (y+j>(h-1))? (2*h-2-y-j):y+j;
-			// ix = (x<=m)?m : (x>=(xl-m-1))? (xl-m-1) : x+i;
-			// iy = (y<=m)?m:(y>=(yl-m-1))?(yl-m-1):y+j;
 			Pixel p = img.GetPixel(ix,iy);
 			r+=k*(float)p.r;
 			g+=k*(float)p.g;
 			b+=k*(float)p.b;
 		}
 	}
-	r=(r<0)?0:(r>255)?255:r;
-	g=(g<0)?0:(g>255)?255:g;
-	b=(b<0)?0:(b>255)?255:b;
-	return Pixel(r,g,b,img.GetPixel(x,y).a);
+	r=(r<0)?-r*c:(r>255)?255:r;
+	g=(g<0)?-g*c:(g>255)?255:g;
+	b=(b<0)?-b*c:(b>255)?255:b;
+	return Pixel(r,g,b,255);//img.GetPixel(x,y).a);
 }
 
 void Image::Blur2D(int n){	
 	int w=Width(), h=Height();
 	assert(n%2==1);
-	int m=(n-1)/2;
+	// int m=(n-1)/2;
 	n = (n<1)? 1 : (n>min(w,h))? min(w,h):n;
-	// Image* img_copy=new Image(*this);
+	Image* img_copy=new Image(*this);
 	float* kernel = new float[n*n];
 	float sigma=n/3; //sigma
 	GaussianFilter2D(kernel,n,sigma);
 	int x,y;
 	for (y=0;y<Height();y++){
 		for (x=0;x<Width();x++){
-			GetPixel(x,y)=convolve2DPixel(kernel,*this,n,x,y);
+			GetPixel(x,y)=convolve2DPixel(kernel,*img_copy,n,x,y,0);
 		}
 	}
-	delete kernel; //, r, g, b;
+	delete[] kernel,img_copy; //, r, g, b;
 	kernel = nullptr;
+	img_copy = nullptr;
 }
 
 void Image::Sharpen(int n){
@@ -531,9 +573,11 @@ void Image::EdgeDetect(){
 	int x,y;
 	int thr=0; //threshold to control how much edge to show
 	Image* img_copy = new Image(*this);
+	
 	for (y=0;y<Height();y++){
 		for (x=0;x<Width();x++){
-			Pixel p = convolve2DPixel(kernel,*img_copy,n,x,y);
+			// printf("x=%d,y=%d\n",x,y);
+			Pixel p = convolve2DPixel(kernel,*img_copy,n,x,y,0);
 			int r=(p.r>thr)?p.r:0;
 			int g=(p.g>thr)?p.g:0;
 			int b=(p.b>thr)?p.b:0;
@@ -544,15 +588,88 @@ void Image::EdgeDetect(){
 	img_copy=nullptr;
 }
 
+void Image::EdgeDetectSobel(){
+	float kernel1[3] = {1,0,-1};
+	float kernel2[3] = {1,2,1};
+	int n=3;
+	Image* Gx=new Image(*this);
+	// Blur(11);
+	
+	Gx->ConvolveRow(kernel1,n,1);
+	Gx->ConvolveCol(kernel2,n,1);
+	Image* Gy=new Image(*this);
+	Gy->ConvolveRow(kernel2,n,1);
+	Gy->ConvolveCol(kernel1,n,1);
+	int x,y;
+	int thr = 50;
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){
+			Pixel px = Gx->GetPixel(x,y);
+			Pixel py = Gy->GetPixel(x,y);
+			float r=sqrt(px.r*px.r+py.r*py.r);
+			float g=sqrt(px.g*px.g+py.g*py.g);
+			float b=sqrt(px.b*px.b+py.b*py.b);
+			r=(r<thr)?0:(r>255)?255:r;
+			g=(g<thr)?0:(g>255)?255:g;
+			b=(b<thr)?0:(b>255)?255:b;
+			GetPixel(x,y)=Pixel(r,g,b,GetPixel(x,y).a);
+			// GetPixel(x,y)=Pixel(ComponentClamp(sqrt(px.r*px.r+py.r*py.r)),ComponentClamp(sqrt(px.g*px.g+py.g*py.g)),ComponentClamp(sqrt(px.b*px.b+py.b*py.b)),GetPixel(x,y).a);
+		}
+	}
+	ChangeSaturation(0);
+	/*img->GetPixel(x,y) = Pixel(rx*rx+ry*ry>t?255:0,gx*gx+gy*gy>t?255:0,bx*bx+by*by>t?255:0);*/
+	delete Gx,Gy;
+	Gx=nullptr;
+	Gy=nullptr;
+}
+
+void Image::EdgeDetectSobel2(){
+	float kernel1[9] = {1,0,-1,2,0,-2,1,0,-1};
+	float kernel2[9] = {1,2,1,0,0,0,-1,-2,-1};
+	int n=3;
+	Image* Gx=new Image(*this);
+	Image* Gy=new Image(*this);
+	
+	int x,y;
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){
+			// printf("x=%d,y=%d\n",x,y);
+			Gx->GetPixel(x,y)=convolve2DPixel(kernel1,*this,n,x,y,1);
+			Gy->GetPixel(x,y)=convolve2DPixel(kernel2,*this,n,x,y,1);
+		}
+	}
+	float thr=0;
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){			
+			Pixel px = Gx->GetPixel(x,y);
+			Pixel py = Gy->GetPixel(x,y);
+			float r=sqrt(px.r*px.r+py.r*py.r);
+			float g=sqrt(px.g*px.g+py.g*py.g);
+			float b=sqrt(px.b*px.b+py.b*py.b);
+			r=(r<thr)?0:(r>255)?255:r;
+			g=(g<thr)?0:(g>255)?255:g;
+			b=(b<thr)?0:(b>255)?255:b;
+			GetPixel(x,y)=Pixel(r,g,b,GetPixel(x,y).a);
+		}
+	}
+	delete Gx,Gy;
+	Gx=nullptr;
+	Gy=nullptr;
+}
+
 Image* Image::Scale(double sx, double sy){
 	int new_w = sx*Width();
 	int new_h = sy*Height();
 	Image* img_new = new Image(new_w,new_h);
 	int x,y;
+	float smin=min(sx,sy);
+	float smax=max(sx,sy);
+	float s=(smin>1)?smax:smin;
+	// printf("sx=%f\n",sx);
 	for (x=0;x<new_w;x++){
 		for (y=0;y<new_h;y++){
-			float u=x/sx,v=y/sy;
-			img_new->GetPixel(x,y)=Sample(u,v);
+			float u=x/sx,v=y/sy;			
+			img_new->GetPixel(x,y)=Sample(u,v,s);
 		}
 	}
 	return img_new;
@@ -574,7 +691,7 @@ Image* Image::Rotate(double angle){
 			u = (x-cx)*cos_th+(y-cy)*sin_th+cx0;
 			v = -(x-cx)*sin_th+(y-cy)*cos_th+cy0;
 			if (u>=0 && v>=0 && u<Width() && v<Height()){
-			img_new->GetPixel(x,y)=Sample(u,v);
+			img_new->GetPixel(x,y)=Sample(u,v,1);
 			} else {
 				img_new->GetPixel(x,y)=Pixel(200,200,200,0); //set extra space color to gray with full transparency support
 			}
@@ -583,9 +700,124 @@ Image* Image::Rotate(double angle){
 	return img_new;
 }
 
-void Image::Fun(){
-	/* WORK HERE */
+void Image::Mosaic(int n){
+	SetSamplingMethod(2);
+	Image* s_img;
+	// Image* img_copy=new Image(*this);
+	// printf("created copy\n");
+	float sx=1/(float)n;
+	s_img=Scale(sx,sx);
+	// printf("scaled\n");
+	int x,y,i,j;	
+	for (x=0;x<s_img->Width();x++){
+		for (y=0;y<s_img->Height();y++){
+			Pixel p=s_img->GetPixel(x,y);
+			for (i=0;i<n;i++){
+				for (j=0;j<n;j++){
+					// printf("x=%d,y=%d,i=%d,j=%d,%d,%d\n",x,y,i,j,x*s+i,y*s+j);
+					GetPixel(x*n+i,y*n+j)=p;
+				}				
+			}
+		}
+	}
+	// int m=(n%2==0)?n-1:n;
+	int m=(int)(n/4)*2+1;
+	Blur(m);
+	delete s_img; //,img_copy;
+	s_img=nullptr;
+	// img_copy=nullptr;
 }
+
+void Image::CharcoalPaint(){
+	EdgeDetectSobel2();
+	ChangeSaturation(0);
+	ChangeContrast(-1);
+}
+
+void Image::Filter1(){
+	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
+	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
+	float k=1;
+	float kernel1[9]={0,k,0,k,k,k,0,k,0};//dilation filter
+	// float kernel[3]={0.1,0.4,0.}
+	int w=Width(), h=Height();
+	int n = 3;
+	int x,y;
+	EdgeDetect();
+	Image* img_copy=new Image(*this);
+	// erosion
+	// int es=3; //size of erosion
+	// int thr = 100;
+	// for (y=es;y<Height()-es;y++){
+	// 	for (x=es;x<Width()-es;x++){
+	// 		Pixel p=img_copy->GetPixel(x,y);
+	// 		int lp=p.Luminance();
+	// 		int setp=1;
+	// 		for (int i=-es;i<=es;i++){
+	// 			Pixel q=img_copy->GetPixel(x+i,y);
+	// 			int lq=q.Luminance();
+	// 			if (abs(lp-lq)>thr) setp=0;
+	// 			q=img_copy->GetPixel(x,y+i);
+	// 			if (abs(lp-lq)>thr) setp=0;			
+	// 		}
+	// 		lp=lp*setp;
+	// 		GetPixel(x,y)=Pixel(lp,lp,lp,p.a);
+	// 	}
+	// }
+	// img_copy=new Image(*this);
+	// int ds=es*2; //size of dilation
+	// for (y=ds;y<Height()-ds;y++){
+	// 	for (x=ds;x<Width()-ds;x++){
+	// 		Pixel p=img_copy->GetPixel(x,y);
+	// 		for (int i=-ds;i<0;i++){
+	// 			for (int j=-ds;j<0;j++){
+	// 				// int l=(p.Luminance())>50?255-p.Luminance():255;
+	// 				GetPixel(x,y)=p;
+	// 			}
+	// 		}
+
+	// 	}
+	// }
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){
+			Pixel p=convolve2DPixel(kernel1,*img_copy,n,x,y,0);
+			// Pixel p=GetPixel(x,y);
+			int l=(p.Luminance())>50?255-p.Luminance():255;
+			GetPixel(x,y)=Pixel(l,l,l,255);
+			// GetPixel(x,y)=Pixel(255-p.r,255-p.g,255-p.b,p.a);
+		}
+	}
+	// ChangeSaturation(0);
+	// ChangeContrast(-0.5);
+	delete img_copy; //, r, g, b;
+	img_copy = nullptr;
+}
+
+// void Image::Filter1(){
+// 	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
+// 	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
+// 	float kernel1[9]={0,0.2,0,0.2,0.2,0.2,0,0.2,0};//dilation filter
+// 	// float kernel[3]={0.1,0.4,0.}
+// 	int w=Width(), h=Height();
+// 	int n = 3;
+// 	// EdgeDetectSobel2();
+// 	Quantize(2);
+// 	Image* img_copy=new Image(*this);
+
+// 	int x,y;
+// 	for (y=0;y<Height();y++){
+// 		for (x=0;x<Width();x++){
+// 			// Pixel p=convolve2DPixel(kernel1,*img_copy,n,x,y);
+// 			// Pixel p=GetPixel(x,y);
+// 			// int l=255-p.Luminance();
+// 			GetPixel(x,y)=convolve2DPixel(kernel1,*img_copy,n,x,y);
+// 		}
+// 	}
+// 	// ChangeSaturation(0);
+// 	// ChangeContrast(-0.5);
+// 	delete img_copy; //, r, g, b;
+// 	img_copy = nullptr;
+// }
 
 /**
  * Image Sample
@@ -596,13 +828,16 @@ void Image::SetSamplingMethod(int method){
 }
 
 
-Pixel Image::Sample (double u, double v){
+Pixel Image::Sample (double u, double v, double s){
    /* IMAGE_SAMPLING_POINT,
     IMAGE_SAMPLING_BILINEAR,
     IMAGE_SAMPLING_GAUSSIAN,
     IMAGE_N_SAMPLING_METHODS */
 	switch (sampling_method){
 		case IMAGE_SAMPLING_BILINEAR:{
+			if (u==0 && v==0){
+				printf("Bilinear...\n");
+			}
 			int x1,x2,y1,y2;
 			float a1,a2,b1,b2;
 			if (u>=Width()-1){
@@ -632,11 +867,16 @@ Pixel Image::Sample (double u, double v){
 			break;
 		}
 		case IMAGE_SAMPLING_GAUSSIAN:{
-			int n = 5; //Determines Gaussian filter size
+			if (u==0 && v==0){
+				printf("Gaussian...\n");
+			}
+			int n = (s<1)?(1/(2*s)*2+1):5; //Determines Gaussian filter size
 			float* kernel = new float[n*n];
-			float sigma=n/3; //sigma
+			float sigma=n/3.0; //sigma
 			GaussianFilter2D(kernel,n,sigma);
-			return convolve2DPixel(kernel,*this,n,(int)u,(int)v);
+			int x=(u>Width()-1)?Width()-1:u;
+			int y=(v>Height()-1)?Height()-1:v;
+			return convolve2DPixel(kernel,*this,n,x,y, 0);
 			delete kernel;
 			kernel = nullptr;
 			break;
@@ -644,6 +884,9 @@ Pixel Image::Sample (double u, double v){
 		case IMAGE_N_SAMPLING_METHODS:
 		case IMAGE_SAMPLING_POINT:
 		default:
+			if (u==0 && v==0){
+				printf("Point...\n");
+			}
 			int x=(round(u)>Width()-1)?Width()-1:round(u);
 			int y=(round(v)>Height()-1)?Height()-1:round(v);
 			return (GetPixel(x,y));

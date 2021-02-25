@@ -34,7 +34,6 @@ enum {
     IMAGE_N_CHANNELS
 };
 
-
 /**
  * Image
  **/
@@ -85,6 +84,7 @@ public:
     // Adds noise to an image.  The amount of noise is given by the factor
     // in the range [0.0..1.0].  0.0 adds no noise.  1.0 adds a lot of noise.
     void AddNoise (double factor);
+    void AddNoiseSaltPepper (double factor);
 
     // Brightens the image by multiplying each pixel component by the factor.
     void Brighten (double factor);
@@ -134,6 +134,8 @@ public:
 
     // Detects edges in an image.
     void EdgeDetect();
+    void EdgeDetectSobel();
+    void EdgeDetectSobel2();
 
     /**
      * Converts an image to nbits per channel using ordered dither, with a
@@ -154,13 +156,23 @@ public:
     Image* Rotate(double angle);
 
     // An extra function of your choice (e.g., non-photorealistic)
-    void Fun();
+    void Mosaic(int n);
+
+    // Another extra function
+    void Filter1();
+    void CharcoalPaint();
 
     // Sets the sampling method.
     void SetSamplingMethod(int method);
 
     // Sample image using current sampling method.
-    Pixel Sample(double u, double v);
+    Pixel Sample(double u, double v, double s);
+
+    //Image filter function
+    void ConvolveRow(const float* filter, int n, int c);
+    void ConvolveCol(const float* filter, int n, int c);   
+
+
 
 };
 
