@@ -14,6 +14,179 @@ using namespace std;
 #define PI 3.1415 
 // #define DEBUG
 
+uint8_t mask(int n){
+	return -(1<<n);
+}
+void bin(uint8_t n)
+{
+    unsigned i;
+    for (i = 1 << 7; i > 0; i = i / 2)
+        (n & i) ? printf("1") : printf("0");
+}
+
+void write_ppm(char* imgName, int width, int height, int bits, const uint8_t *data){
+   //Open the texture image file
+   ofstream ppmFile(imgName, std::ios::binary);
+//    ppmFile.open(imgName);
+   if (!ppmFile){
+      printf("ERROR: Could not creat file '%s'\n",imgName);
+      exit(1);
+   }
+
+   //Set this as an ASCII PPM (first line is P3)
+   string PPM_style = "P2\n";
+   ppmFile << PPM_style; //Read the first line of the header    
+
+   //Write out the texture width and height
+   ppmFile << width << " "  << height << "\n" ;
+	int maximum = (2<<(bits-1))-1;
+   ppmFile << maximum;// << "\n" ;
+
+   int shift = 8-bits;
+   int numBytes = ceil(bits*3.0/8.0);
+//    printf("numBytes=%d\n",numBytes);
+	//Write out data as binary
+	uint8_t p[3];
+	uint8_t dout[numBytes];
+	for (int i = 0; i < height; i++){
+      for (int j = 0; j < width; j++){
+		p[0] = data[i*width*4 + j*4 + 0]>>shift;  //Red
+		p[1] = data[i*width*4 + j*4 + 1]>>shift;  //Green
+		p[2] = data[i*width*4 + j*4 + 2]>>shift;  //Blue
+		memset(dout, 0x00, numBytes);
+		int pbits=bits,ip=0, id=0, dbits=8; //remaining bits to store
+		while (ip<=2 && id<numBytes){
+			if (dbits>pbits){
+				if (pbits==bits){
+					dout[id]=(dout[id])|((p[ip]<<(dbits-pbits)));	
+				}else{
+					dout[id]=dout[id]|(p[ip]<<(8-pbits));
+				}
+				dbits-=pbits;ip++;pbits=bits;
+			} else {
+				dout[id]=dout[id]|(p[ip]>>(pbits-dbits));
+				pbits -= dbits; dbits=8; id++;
+			}
+			if (dbits<1 && id<numBytes-1){
+				id++;dbits=8;
+			}
+			if (pbits<1 && ip<2){
+				ip++;pbits=bits;
+			}
+		}
+		for (int k=0; k<numBytes;k++){
+
+			ppmFile.write(reinterpret_cast<char*>(&dout[k]), sizeof dout[k]);
+		}
+	  }
+	}
+   ppmFile.close();
+}
+
+int log2_asm(int x){
+	uint32_t y;
+	asm ("\tbsr %1, %0\n"
+		: "=r"(y)
+		: "r" (x)
+	);
+	return y;
+}
+
+//DONE - HW2: The current implementation of read_ppm() assumes the PPM file has a maximum value of 255 (ie., an 8-bit PPM) ...
+//DONE - HW2: ... you need to adjust the function to support PPM files with a max value of 1, 3, 7, 15, 31, 63, 127, and 255 (why these numbers?)
+uint8_t* read_ppm(char* imgName, int& width, int& height){
+   //Open the texture image file
+   ifstream ppmFile;
+   ppmFile.open(imgName, ios::binary);
+   if (!ppmFile){
+      printf("ERROR: Image file '%s' not found.\n",imgName);
+      exit(1);
+   }
+	int dsize=sizeof(Pixel);
+   //Check that this is an ASCII PPM (first line is P3)
+   string PPM_style;
+   ppmFile >> PPM_style; //Read the first line of the header    
+
+   //Read in the texture width and height
+   ppmFile >> width >> height;
+   unsigned char* img_data = new unsigned char[dsize*width*height];
+
+   //Check that the 3rd line is 255 (ie., this is an 8 bit/pixel PPM)
+   int maximum;
+   ppmFile >> maximum;
+//    int factor = 256/(maximum+1);
+   int bits=log2_asm(maximum+1);
+   int shift=8-bits;
+   int numBytes = ceil(bits*3.0/8.0);
+//    printf("bits=%d\n",bits);
+//    printf("numBytes=%d\n",numBytes);
+
+   if (PPM_style == "P3"){
+	int r, g, b;
+	for (int i = 0; i < height; i++){
+		for (int j = 0; j < width; j++){
+			ppmFile >> r >> g >> b;
+			img_data[i*width*4 + j*4] = r<<shift;//*factor>>;  //Red
+			img_data[i*width*4 + j*4 + 1] = g<<shift;//*factor;  //Green
+			img_data[i*width*4 + j*4 + 2] = b<<shift;//*factor;  //Blue
+			img_data[i*width*4 + j*4 + 3] = 255;  //Alpha
+		}
+	}
+   } else if (PPM_style == "P2"){
+	uint8_t p[3];
+	uint8_t dout[numBytes];
+	for (int i = 0; i < height; i++){
+		for (int j = 0; j < width; j++){
+			for (int k=0; k<numBytes;k++){
+				ppmFile.read(reinterpret_cast<char*>(&dout[k]), sizeof dout[k]);
+			}
+			// printf("before memset\n");
+			memset(p, 0x00, 3);
+			// printf("memset done\n");
+			int pbits=bits,ip=0, id=0, dbits=8; //remaining bits to store
+			while (ip<=2 && id<numBytes){
+				if (dbits>pbits){
+					if (pbits==bits){
+						p[ip]=(dout[id]>>(dbits-pbits))&~mask(pbits);
+	
+					}else{
+						p[ip]= p[ip] | (dout[id]>>(dbits-pbits));
+						// printf("id=%d,ip=%d,dbits=%d,pbits=%d\n",id,ip,dbits,pbits);
+						// printf("dout[%d]=",id);
+						// bin(dout[id]);
+						// printf(", p[%d]=",ip);bin(p[ip]);printf("\n");
+					}
+					dbits-=pbits;ip++;pbits=bits;
+				} else {
+					p[ip]=(dout[id]<<(pbits-dbits))&~mask(pbits);
+					// printf("mask=");bin(mask(pbits));
+					// printf(", dout[%d]>>(pbits-dbits)=",id);bin(dout[id]>>(pbits-dbits));
+					// printf("\nid=%d,ip=%d,dbits=%d,pbits=%d\n",id,ip,dbits,pbits);
+					// printf("dout[%d]=",id);
+					// bin(dout[id]);
+					// printf(", p[%d]=",ip);bin(p[ip]);printf("\n");
+					pbits -= dbits; dbits=8; id++;
+				}
+
+				if (dbits==0 && id<numBytes-1){
+					id++;dbits=8;
+				}
+				if (pbits==0 && ip<2){
+					ip++;pbits=bits;
+				}
+			}
+			// if(j==1) assert(false);
+			img_data[i*width*4 + j*4] = p[0]<<shift;//*factor;  //Red
+			img_data[i*width*4 + j*4 + 1] = p[1]<<shift;//*factor;  //Green
+			img_data[i*width*4 + j*4 + 2] = p[2]<<shift;//*factor;  //Blue
+			img_data[i*width*4 + j*4 + 3] = 255;  //Alpha
+		}
+	}
+   }
+
+   return img_data;
+}
+
 /**
  * Image
  **/
@@ -54,11 +227,17 @@ Image::Image (const Image& src){
 }
 
 Image::Image (char* fname){
-
+	uint8_t* loadedPixels;
+	int lastc = strlen(fname);
+	if (string(fname+lastc-3) == "ppm"){
+		loadedPixels = read_ppm(fname, width, height);
+	}
+	else{
 	int numComponents; //(e.g., Y, YA, RGB, or RGBA)
 
 	//Load the pixels with STB Image Lib
-	uint8_t* loadedPixels = stbi_load(fname, &width, &height, &numComponents, 4);
+	loadedPixels = stbi_load(fname, &width, &height, &numComponents, 4);
+	}
 	if (loadedPixels == NULL){
 	printf("Error loading image: %s", fname);
 	exit(-1);
@@ -84,6 +263,10 @@ void Image::Write(char* fname){
 	int lastc = strlen(fname);
 
 	switch (fname[lastc-1]){
+		case 'm': //ppm
+			printf("Writing ppm file with depth=%d\n",export_depth);
+		 	 write_ppm(fname, width, height, export_depth, data.raw);
+				break;
 	   case 'g': //jpeg (or jpg) or png
 	     if (fname[lastc-2] == 'p' || fname[lastc-2] == 'e') //jpeg or jpg
 	        stbi_write_jpg(fname, width, height, 4, data.raw, 95);  //95% jpeg quality
