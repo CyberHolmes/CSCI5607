@@ -34,7 +34,7 @@ void write_ppm(char* imgName, int width, int height, int bits, const uint8_t *da
    }
 
    //Set this as an ASCII PPM (first line is P3)
-   string PPM_style = "P2\n";
+   string PPM_style = "P6\n";
    ppmFile << PPM_style; //Read the first line of the header    
 
    //Write out the texture width and height
@@ -132,7 +132,7 @@ uint8_t* read_ppm(char* imgName, int& width, int& height){
 			img_data[i*width*4 + j*4 + 3] = 255;  //Alpha
 		}
 	}
-   } else if (PPM_style == "P2"){
+   } else if (PPM_style == "P6"){
 	uint8_t p[3];
 	uint8_t dout[numBytes];
 	for (int i = 0; i < height; i++){
@@ -760,7 +760,7 @@ void Image::EdgeDetect(){
 	for (y=0;y<Height();y++){
 		for (x=0;x<Width();x++){
 			// printf("x=%d,y=%d\n",x,y);
-			Pixel p = convolve2DPixel(kernel,*img_copy,n,x,y,0);
+			Pixel p = convolve2DPixel(kernel,*img_copy,n,x,y,1);
 			int r=(p.r>thr)?p.r:0;
 			int g=(p.g>thr)?p.g:0;
 			int b=(p.b>thr)?p.b:0;
@@ -1018,9 +1018,6 @@ Pixel Image::Sample (double u, double v, double s){
     IMAGE_N_SAMPLING_METHODS */
 	switch (sampling_method){
 		case IMAGE_SAMPLING_BILINEAR:{
-			if (u==0 && v==0){
-				printf("Bilinear...\n");
-			}
 			int x1,x2,y1,y2;
 			float a1,a2,b1,b2;
 			if (u>=Width()-1){
@@ -1050,9 +1047,6 @@ Pixel Image::Sample (double u, double v, double s){
 			break;
 		}
 		case IMAGE_SAMPLING_GAUSSIAN:{
-			if (u==0 && v==0){
-				printf("Gaussian...\n");
-			}
 			int n = (s<1)?(1/(2*s)*2+1):5; //Determines Gaussian filter size
 			float* kernel = new float[n*n];
 			float sigma=n/3.0; //sigma
@@ -1067,9 +1061,6 @@ Pixel Image::Sample (double u, double v, double s){
 		case IMAGE_N_SAMPLING_METHODS:
 		case IMAGE_SAMPLING_POINT:
 		default:
-			if (u==0 && v==0){
-				printf("Point...\n");
-			}
 			int x=(round(u)>Width()-1)?Width()-1:round(u);
 			int y=(round(v)>Height()-1)?Height()-1:round(v);
 			return (GetPixel(x,y));

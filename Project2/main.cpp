@@ -70,6 +70,16 @@ int main( int argc, char* argv[] ){
 				argv += 2, argc -= 2;
 			}
 
+			else if (!strcmp(*argv, "-ppm_depth")){
+				int bits;
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				bits = atof(argv[1]);
+				img->export_depth = bits;
+				argv += 2, argc -=2;
+			}
+
 			else if (!strcmp(*argv, "-noise"))
 			{
 				double factor;
@@ -351,6 +361,7 @@ static char options[] =
 "-mosiac\n"
 "-filter1\n"
 "-sampling <method no>\n"
+"-ppm_depth <method no>\n"
 ;
 
 static void ShowUsage(void)
