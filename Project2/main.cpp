@@ -286,19 +286,27 @@ int main( int argc, char* argv[] ){
 				argv+=2, argc-=2;
 			}
 
-			else if (!strcmp(*argv, "-filter1")){
-				CheckOption(*argv, argc, 2);
-				if (img == NULL) ShowUsage();
-
-				img->Filter1();
-				argv += 1, argc -= 1;
-			}
-
 			else if (!strcmp(*argv, "-charcoalPaint")){
 				CheckOption(*argv, argc, 2);
 				if (img == NULL) ShowUsage();
 
 				img->CharcoalPaint();
+				argv += 1, argc -= 1;
+			}
+
+			else if (!strcmp(*argv, "-charcoalPaint2")){
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				img->CharcoalPaint2();
+				argv += 1, argc -= 1;
+			}
+
+			else if (!strcmp(*argv, "-f1")){
+				CheckOption(*argv, argc, 2);
+				if (img == NULL) ShowUsage();
+
+				img->Filter1();
 				argv += 1, argc -= 1;
 			}
 

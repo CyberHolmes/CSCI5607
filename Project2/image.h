@@ -159,8 +159,9 @@ public:
     void Mosaic(int n);
 
     // Another extra function
-    void Filter1();
     void CharcoalPaint();
+    void Filter1();
+    void CharcoalPaint2();
 
     // Sets the sampling method.
     void SetSamplingMethod(int method);

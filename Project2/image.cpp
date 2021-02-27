@@ -880,12 +880,6 @@ void Image::Mosaic(int n){
 }
 
 void Image::CharcoalPaint(){
-	EdgeDetectSobel2();
-	ChangeSaturation(0);
-	ChangeContrast(-1);
-}
-
-void Image::Filter1(){
 	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
 	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
 	float k=1;
@@ -896,7 +890,7 @@ void Image::Filter1(){
 	int x,y;
 	EdgeDetect();
 	Image* img_copy=new Image(*this);
-	// erosion
+	// // erosion
 	// int es=3; //size of erosion
 	// int thr = 100;
 	// for (y=es;y<Height()-es;y++){
@@ -916,14 +910,14 @@ void Image::Filter1(){
 	// 	}
 	// }
 	// img_copy=new Image(*this);
-	// int ds=es*2; //size of dilation
-	// for (y=ds;y<Height()-ds;y++){
-	// 	for (x=ds;x<Width()-ds;x++){
+	// int ds=es; //size of dilation
+	// for (y=ds;y<Height()-ds;y+=ds){
+	// 	for (x=ds;x<Width()-ds;x+=ds){
 	// 		Pixel p=img_copy->GetPixel(x,y);
-	// 		for (int i=-ds;i<0;i++){
-	// 			for (int j=-ds;j<0;j++){
+	// 		for (int i=-ds;i<=ds;i++){
+	// 			for (int j=-ds;j<=ds;j++){
 	// 				// int l=(p.Luminance())>50?255-p.Luminance():255;
-	// 				GetPixel(x,y)=p;
+	// 				GetPixel(x+i,y+j)=p;
 	// 			}
 	// 		}
 
@@ -943,32 +937,127 @@ void Image::Filter1(){
 	delete img_copy; //, r, g, b;
 	img_copy = nullptr;
 }
+void Image::CharcoalPaint2(){
+	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
+	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
+	float k=1;
+	float kernel1[9]={0,k,0,k,k,k,0,k,0};//dilation filter
+	// float kernel[3]={0.1,0.4,0.}
+	int w=Width(), h=Height();
+	int n = 3;
+	int x,y;
+	EdgeDetectSobel();
+	Image* img_copy=new Image(*this);
+	// erosion
+	int es=3; //size of erosion
+	// int thr = 100;
+	// for (y=es;y<Height()-es;y++){
+	// 	for (x=es;x<Width()-es;x++){
+	// 		Pixel p=img_copy->GetPixel(x,y);
+	// 		int lp=p.Luminance();
+	// 		int setp=1;
+	// 		for (int i=-es;i<=es;i++){
+	// 			Pixel q=img_copy->GetPixel(x+i,y);
+	// 			int lq=q.Luminance();
+	// 			if (abs(lp-lq)>thr) setp=0;
+	// 			q=img_copy->GetPixel(x,y+i);
+	// 			if (abs(lp-lq)>thr) setp=0;			
+	// 		}
+	// 		lp=lp*setp;
+	// 		GetPixel(x,y)=Pixel(lp,lp,lp,p.a);
+	// 	}
+	// }
+	// img_copy=new Image(*this);
+	int ds=es*2; //size of dilation
+	for (y=ds;y<Height()-ds;y+=ds){
+		for (x=ds;x<Width()-ds;x+=ds){
+			Pixel p=img_copy->GetPixel(x,y);
+			for (int i=-ds;i<=ds;i++){
+				for (int j=-ds;j<=ds;j++){
+					// int l=(p.Luminance())>50?255-p.Luminance():255;
+					GetPixel(x+i,y+j)=p;
+				}
+			}
 
-// void Image::Filter1(){
-// 	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
-// 	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
-// 	float kernel1[9]={0,0.2,0,0.2,0.2,0.2,0,0.2,0};//dilation filter
-// 	// float kernel[3]={0.1,0.4,0.}
-// 	int w=Width(), h=Height();
-// 	int n = 3;
-// 	// EdgeDetectSobel2();
-// 	Quantize(2);
-// 	Image* img_copy=new Image(*this);
+		}
+	}
+	for (y=0;y<Height();y++){
+		for (x=0;x<Width();x++){
+			Pixel p=convolve2DPixel(kernel1,*img_copy,n,x,y,0);
+			// Pixel p=GetPixel(x,y);
+			int l=(p.Luminance())>50?255-p.Luminance():255;
+			GetPixel(x,y)=Pixel(l,l,l,255);
+			// GetPixel(x,y)=Pixel(255-p.r,255-p.g,255-p.b,p.a);
+		}
+	}
+	// ChangeSaturation(0);
+	// ChangeContrast(-0.5);
+	delete img_copy; //, r, g, b;
+	img_copy = nullptr;
+}
 
-// 	int x,y;
-// 	for (y=0;y<Height();y++){
-// 		for (x=0;x<Width();x++){
-// 			// Pixel p=convolve2DPixel(kernel1,*img_copy,n,x,y);
-// 			// Pixel p=GetPixel(x,y);
-// 			// int l=255-p.Luminance();
-// 			GetPixel(x,y)=convolve2DPixel(kernel1,*img_copy,n,x,y);
-// 		}
-// 	}
-// 	// ChangeSaturation(0);
-// 	// ChangeContrast(-0.5);
-// 	delete img_copy; //, r, g, b;
-// 	img_copy = nullptr;
-// }
+void Image::Filter1(){
+	// float kernel1[9] = {1,1,-1,2,1,-2,2,-2,-2};//{1,1,-1,2,1,-2,1,-2,-1};
+	// float kernel1[9]={1,1,1,1,1,1,1,1,1};
+	float k=1;
+	float kernel1[9]={0,k,0,k,k,k,0,k,0};//dilation filter
+	// float kernel[3]={0.1,0.4,0.}
+	int w=Width(), h=Height();
+	int n = 3;
+	int x,y;
+	Image* img_copy=new Image(*this);
+	//erosion
+	int es=20; //size of erosion
+	int thr = 100;
+	for (y=es;y<Height()-es;y++){
+		for (x=es;x<Width()-es;x++){
+			Pixel p=img_copy->GetPixel(x,y);
+			int lp=p.Luminance();
+			int setp=1;
+			for (int i=-es;i<=es;i++){
+				Pixel q=img_copy->GetPixel(x+i,y);
+				int lq=q.Luminance();
+				if (abs(lp-lq)>thr) setp=0;
+				q=img_copy->GetPixel(x,y+i);
+				if (abs(lp-lq)>thr) setp=0;			
+			}
+			lp=lp*setp;
+			GetPixel(x,y)=Pixel(p.r*setp,p.g*setp,p.b*setp,p.a);
+		}
+	}
+	img_copy=new Image(*this);
+	//dilation
+	int ds=es; //size of dilation
+	for (y=ds;y<Height()-ds;y+=ds){
+		for (x=ds;x<Width()-ds;x+=ds){
+			Pixel p=img_copy->GetPixel(x,y);
+			for (int i=-ds;i<=ds;i++){
+				for (int j=-ds;j<=ds;j++){
+					// int l=(p.Luminance())>50?255-p.Luminance():255;
+					GetPixel(x+i,y+j)=p;
+				}
+			}
+
+		}
+	}
+	img_copy=new Image(*this);
+	x=Width()-ds;
+	for (y=Height()-ds;y<Height()-1;y++){
+		Pixel p=img_copy->GetPixel(x-1,y);
+		GetPixel(x,y)=p;
+	}
+	img_copy=new Image(*this);
+	y=Height()-ds;
+	for (x=Width()-ds;x<Width()-1;x++){
+		Pixel p=img_copy->GetPixel(x,y-1);
+		GetPixel(x,y)=p;
+	}
+	Blur(3);
+	// ChangeSaturation(0);
+	// ChangeContrast(-0.5);
+	delete img_copy; //, r, g, b;
+	img_copy = nullptr;
+}
 
 /**
  * Image Sample
