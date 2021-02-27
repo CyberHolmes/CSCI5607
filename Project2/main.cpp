@@ -367,7 +367,7 @@ static char options[] =
 "-scale <sx> <sy>\n"
 "-rotate <angle>\n"
 "-mosiac\n"
-"-filter1\n"
+"-charcoalPaint\n"
 "-sampling <method no>\n"
 "-ppm_depth <method no>\n"
 ;
