@@ -15,7 +15,7 @@ using namespace std;
 // #define DEBUG
 
 uint8_t mask(int n){
-	return -(1<<n);
+	return ~-(1<<n);
 }
 void bin(uint8_t n)
 {
@@ -44,42 +44,34 @@ void write_ppm(char* imgName, int width, int height, int bits, const uint8_t *da
 
    int shift = 8-bits;
    int numBytes = ceil(bits*3.0/8.0);
-//    printf("numBytes=%d\n",numBytes);
-	//Write out data as binary
-	uint8_t p[3];
-	uint8_t dout[numBytes];
-	for (int i = 0; i < height; i++){
-      for (int j = 0; j < width; j++){
-		p[0] = data[i*width*4 + j*4 + 0]>>shift;  //Red
-		p[1] = data[i*width*4 + j*4 + 1]>>shift;  //Green
-		p[2] = data[i*width*4 + j*4 + 2]>>shift;  //Blue
-		memset(dout, 0x00, numBytes);
-		int pbits=bits,ip=0, id=0, dbits=8; //remaining bits to store
-		while (ip<=2 && id<numBytes){
-			if (dbits>pbits){
+   int numComponents=sizeof(Pixel)*width*height;
+   
+   int pbits=bits,dbits=8; 
+   uint8_t dout=0, p;
+   int dcnt=0;
+   for (int i=0; i<numComponents; i++){
+	   if ((i+1)%4==0) i++;
+	   p=data[i]>>shift; pbits=bits;
+	   while (pbits>0){
+		  	if (dbits>pbits){
 				if (pbits==bits){
-					dout[id]=(dout[id])|((p[ip]<<(dbits-pbits)));	
+					dout=(dout)|((p<<(dbits-pbits)));
 				}else{
-					dout[id]=dout[id]|(p[ip]<<(8-pbits));
+					dout=dout|(p<<(8-pbits));
 				}
-				dbits-=pbits;ip++;pbits=bits;
+				dbits-=pbits;pbits-=pbits;
 			} else {
-				dout[id]=dout[id]|(p[ip]>>(pbits-dbits));
-				pbits -= dbits; dbits=8; id++;
+				dout=dout|(p>>(pbits-dbits));
+				pbits -= dbits;dbits-=dbits;
 			}
-			if (dbits<1 && id<numBytes-1){
-				id++;dbits=8;
+			if (dbits<1){
+				ppmFile.write(reinterpret_cast<char*>(&dout), sizeof dout);
+				dbits=8;
+				dout=0;
+				dcnt++;
 			}
-			if (pbits<1 && ip<2){
-				ip++;pbits=bits;
-			}
-		}
-		for (int k=0; k<numBytes;k++){
-
-			ppmFile.write(reinterpret_cast<char*>(&dout[k]), sizeof dout[k]);
-		}
-	  }
-	}
+	   }
+   }
    ppmFile.close();
 }
 
@@ -113,13 +105,11 @@ uint8_t* read_ppm(char* imgName, int& width, int& height){
 
    //Check that the 3rd line is 255 (ie., this is an 8 bit/pixel PPM)
    int maximum;
-   ppmFile >> maximum;
+   ppmFile >> maximum;   
 //    int factor = 256/(maximum+1);
    int bits=log2_asm(maximum+1);
    int shift=8-bits;
    int numBytes = ceil(bits*3.0/8.0);
-//    printf("bits=%d\n",bits);
-//    printf("numBytes=%d\n",numBytes);
 
    if (PPM_style == "P3"){
 	int r, g, b;
@@ -133,57 +123,35 @@ uint8_t* read_ppm(char* imgName, int& width, int& height){
 		}
 	}
    } else if (PPM_style == "P6"){
-	uint8_t p[3];
-	uint8_t dout[numBytes];
-	for (int i = 0; i < height; i++){
-		for (int j = 0; j < width; j++){
-			for (int k=0; k<numBytes;k++){
-				ppmFile.read(reinterpret_cast<char*>(&dout[k]), sizeof dout[k]);
-			}
-			// printf("before memset\n");
-			memset(p, 0x00, 3);
-			// printf("memset done\n");
-			int pbits=bits,ip=0, id=0, dbits=8; //remaining bits to store
-			while (ip<=2 && id<numBytes){
-				if (dbits>pbits){
-					if (pbits==bits){
-						p[ip]=(dout[id]>>(dbits-pbits))&~mask(pbits);
-	
-					}else{
-						p[ip]= p[ip] | (dout[id]>>(dbits-pbits));
-						// printf("id=%d,ip=%d,dbits=%d,pbits=%d\n",id,ip,dbits,pbits);
-						// printf("dout[%d]=",id);
-						// bin(dout[id]);
-						// printf(", p[%d]=",ip);bin(p[ip]);printf("\n");
-					}
-					dbits-=pbits;ip++;pbits=bits;
-				} else {
-					p[ip]=(dout[id]<<(pbits-dbits))&~mask(pbits);
-					// printf("mask=");bin(mask(pbits));
-					// printf(", dout[%d]>>(pbits-dbits)=",id);bin(dout[id]>>(pbits-dbits));
-					// printf("\nid=%d,ip=%d,dbits=%d,pbits=%d\n",id,ip,dbits,pbits);
-					// printf("dout[%d]=",id);
-					// bin(dout[id]);
-					// printf(", p[%d]=",ip);bin(p[ip]);printf("\n");
-					pbits -= dbits; dbits=8; id++;
-				}
-
-				if (dbits==0 && id<numBytes-1){
-					id++;dbits=8;
-				}
-				if (pbits==0 && ip<2){
-					ip++;pbits=bits;
-				}
-			}
-			// if(j==1) assert(false);
-			img_data[i*width*4 + j*4] = p[0]<<shift;//*factor;  //Red
-			img_data[i*width*4 + j*4 + 1] = p[1]<<shift;//*factor;  //Green
-			img_data[i*width*4 + j*4 + 2] = p[2]<<shift;//*factor;  //Blue
-			img_data[i*width*4 + j*4 + 3] = 255;  //Alpha
+	int pbits=bits,dbits=0; 
+	uint8_t dout;
+	int numComponents=dsize*width*height, i=0;
+	int dcnt=0;
+	while (i<numComponents){
+		if (dbits<1){
+			ppmFile.read(reinterpret_cast<char*>(&dout), sizeof dout);
+			dbits=8; dcnt++;
 		}
+		if (dbits>pbits){
+			if (pbits==bits){
+				img_data[i]=(dout>>(dbits-pbits))&mask(pbits);
+			}else{
+				img_data[i]= img_data[i] | (dout>>(dbits-pbits));
+			}
+			dbits-=pbits;
+			img_data[i]=img_data[i]<<shift; i++; pbits=bits;
+			if ((i+1)%4==0) {
+				img_data[i]=255;
+				i++;
+			}
+		} else {
+			img_data[i]=(dout<<(pbits-dbits))&mask(pbits);
+			pbits -= dbits;dbits-=dbits;
+		}	
 	}
    }
 
+	ppmFile.close();
    return img_data;
 }
 
