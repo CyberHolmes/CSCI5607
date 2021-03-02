@@ -512,16 +512,36 @@ void Image::FloydSteinbergDither(int nbits){
 }
 
 //Generate a 1D Gaussian filter of size n
-void GaussianFilter1D(float* kernel, int n){
-	float sigma=n/3; //sigma
-	float p,q=2.0*sigma*sigma;
+// void GaussianFilter1D(float* kernel, int n){
+// 	float sigma=n/3; //sigma
+// 	float p,q=2.0*sigma*sigma;
+// 	float s=0;
+// 	int m=(n-1)/2;
+// 	int i;
+// 	if (n>1){
+// 		for (i=-m;i<=m;i++){
+// 			p = i*i;
+// 			kernel[i+m]=(exp(-p/q)/sqrt(PI*q));
+// 			s += kernel[i+m];
+// 		}
+// 		for (i=-m;i<=m;i++){
+// 			kernel[i+m] /= s;
+// 		}
+// 	} else {
+// 		kernel[0]=1;
+// 	}
+// }
+
+void GaussianFilter1D(float* kernel, int n, float dx){
+	// float sigma=n/3; //sigma
+	float p,q=2.0*0.2;
 	float s=0;
 	int m=(n-1)/2;
 	int i;
 	if (n>1){
 		for (i=-m;i<=m;i++){
-			p = i*i;
-			kernel[i+m]=(exp(-p/q)/sqrt(PI*q));
+			p = (i-dx)*(i-dx)/(float)(m*m);
+			kernel[i+m]=(exp(-p/q/2.0)/sqrt(2.0*PI*q));
 			s += kernel[i+m];
 		}
 		for (i=-m;i<=m;i++){
@@ -531,22 +551,6 @@ void GaussianFilter1D(float* kernel, int n){
 		kernel[0]=1;
 	}
 }
-
-// float convolve1D(const float* filter, const float* data, int n, int x, int w){
-// 	int i,ix;
-// 	float s=0;
-// 	float a,b;
-// 	int m=(n-1)/2;
-// 	for (i=-m;i<=m;i++){
-// 		a=filter[i+m];
-// 		// ix = (x<n)?n-x : (x>(xl-n-1))? (2*xl-x-n-1) : x+i;
-// 		// ix = (x<n)?n : (x>(xl-n-1))? (xl-n-1) : x+i;
-// 		ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
-// 		b = data[ix];
-// 		s += a*b;
-// 	}
-// 	return s;
-// }
 
 void Image::ConvolveRow(const float* kernel, int n, int c){
 	Image* img_copy=new Image(*this);
@@ -608,7 +612,7 @@ void Image::Blur(int n){
 	n = (n<1)? 1 : (n>min(w,h))? min(w,h):n;
 	
 	float* kernel = new float[n];
-	GaussianFilter1D(kernel,n);
+	GaussianFilter1D(kernel,n,0);
 	ConvolveRow(kernel,n,0);
 	ConvolveCol(kernel,n,0);
 	
@@ -616,16 +620,41 @@ void Image::Blur(int n){
 	kernel = NULL;
 }
 
-void GaussianFilter2D(float* kernel, int n, float sigma){	
-	float p,q=2.0*sigma*sigma;
+// void GaussianFilter2D(float* kernel, int n, float sigma){	
+// 	float p,q=2.0*sigma*sigma;
+// 	float s=0;
+// 	int i,j,m=(n-1)/2;
+// 	if (n>1){
+// 		for (i=-m;i<=m;i++){
+// 			for(j=-m;j<=m;j++){
+// 				p = i*i+j*j;
+// 				int idx = (i+m)*(2*m+1)+j+m;
+// 				kernel[idx]=(exp(-p/q)/sqrt(PI*q));
+// 				s += kernel[idx];
+// 			}
+// 		}
+// 		for (i=-m;i<=m;i++){
+// 			for(j=-m;j<=m;j++){
+// 				int idx = (i+m)*(2*m+1)+j+m;
+// 				kernel[idx] /= s;
+// 			}
+// 		}
+// 	} else {
+// 		kernel[0]=1;
+// 	}
+// }
+
+void GaussianFilter2D(float* kernel, int n, float dx, float dy){	
+	float sigma=1.0;
+	float p,q=2.0*0.2;
 	float s=0;
 	int i,j,m=(n-1)/2;
 	if (n>1){
 		for (i=-m;i<=m;i++){
 			for(j=-m;j<=m;j++){
-				p = i*i+j*j;
+				p = ((i-dx)*(i-dx)+(j-dy)*(j-dy))/(float)(m*m);
 				int idx = (i+m)*(2*m+1)+j+m;
-				kernel[idx]=(exp(-p/q)/sqrt(PI*q));
+				kernel[idx]=(exp(-p/q/2.0)/sqrt(2.0*PI*q));//(exp(-p/q)/(PI*q));
 				s += kernel[idx];
 			}
 		}
@@ -639,25 +668,6 @@ void GaussianFilter2D(float* kernel, int n, float sigma){
 		kernel[0]=1;
 	}
 }
-
-// float convolve2D(const float* filter, const float* data, int n, int x, int y, int w, int h){
-// 	int i,j,idxa,idxb,ix,iy;
-// 	float s=0;
-// 	float a,b;
-// 	int m=(n-1)/2;
-// 	for (i=-m;i<m+1;i++){
-// 		for (j=-m;j<m+1;j++){
-// 			idxa = (i+m)*(2*m+1)+j+m;
-// 			a=filter[idxa];
-// 			ix = (x+i<=0)?-x-i : (x+i>(w-1))? (2*w-2-x-i) : x+i;
-// 			iy = (y+j<=0)?-y-j : (y+j>(h-1))? (2*h-2-y-j):y+j;
-// 			idxb = ix+iy*w;
-// 			b=data[idxb];
-// 			s += a*b;
-// 		}
-// 	}
-// 	return s;
-// }
 
 Pixel convolve2DPixel(const float* filter, const Image& img, int n, int x, int y, int c){
 	int i,j,ik,ix,iy;
@@ -691,7 +701,7 @@ void Image::Blur2D(int n){
 	Image* img_copy=new Image(*this);
 	float* kernel = new float[n*n];
 	float sigma=n/3; //sigma
-	GaussianFilter2D(kernel,n,sigma);
+	GaussianFilter2D(kernel,n,0,0);
 	int x,y;
 	for (y=0;y<Height();y++){
 		for (x=0;x<Width();x++){
@@ -1104,10 +1114,10 @@ Pixel Image::Sample (double u, double v, double s){
 			break;
 		}
 		case IMAGE_SAMPLING_GAUSSIAN:{
-			int n = (s<1)?(1/(2*s)*2+1):5; //Determines Gaussian filter size
+			int n = (s<1)?(1/(2*s)*2+1):3; //Determines Gaussian filter size
 			float* kernel = new float[n*n];
-			float sigma=n/3.0; //sigma
-			GaussianFilter2D(kernel,n,sigma);
+			// float sigma=n/3.0; //sigma
+			GaussianFilter2D(kernel,n,(u-floor(u)),(v-floor(v)));
 			int x=(u>Width()-1)?Width()-1:u;
 			int y=(v>Height()-1)?Height()-1:v;
 			return convolve2DPixel(kernel,*this,n,x,y, 0);
