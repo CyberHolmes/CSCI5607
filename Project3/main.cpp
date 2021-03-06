@@ -64,7 +64,7 @@ int main(int argc, char** argv){
         // printf("color = %f,%f,%f\n",hitInfo.c.r,hitInfo.c.g,hitInfo.c.b);
         // assert(false);
         color = hitInfo.c;
-        hitInfo.t = 99999;
+        hitInfo.t = MAX_T;
       } else {
         color = scene.GetBackground();
         // printf("no hit\n");

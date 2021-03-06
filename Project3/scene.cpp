@@ -95,17 +95,14 @@ bool Scene::HitWInfo (vec3 p, vec3 d, HitInfo& hi){
     }
     if (hit){
         Color c_out;
-        //Get ambient light
-        Material m = spheres[hi.objI].m;
-        // Color la = ambientlight*m.ac;
-        c_out = c_out+ ambientlight*m.ac;
+        c_out = c_out+ ambientlight*hi.m.ac;
         for (int i=0;i<numPointlights;i++){
             PointLight pl = pointlights[i];
             //check if the ray is blocked from the light source
             if (!Hit(hi.hitPos, pl.p - hi.hitPos, hi.objI)){
                 vec3 ldir = pl.p - hi.hitPos;
                 vec3 h = (1/(hi.v + ldir).length())*(hi.v + ldir);
-                c_out = c_out + pl.Shading(m,hi.hitPos,hi.hitNorm,ldir,h);                
+                c_out = c_out + pl.Shading(hi.m,hi.hitPos,hi.hitNorm,ldir,h);                
             }
         }
         hi.c = c_out;

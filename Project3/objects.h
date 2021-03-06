@@ -9,20 +9,7 @@
 #include <assert.h>
 
 #define MIN_T 0.0001
-
-struct HitInfo{
-    // bool hit;
-    vec3 hitPos;
-    vec3 hitNorm;
-    float t;
-    vec3 v;
-    int objI; //object index
-    Color c;
-    // vec3 r;
-    // vec3 h;
-    // vec3 l;    
-    HitInfo():hitPos(vec3()),hitNorm(vec3()), t(99999), v(vec3()), objI(-1), c(Color()) {}
-};
+#define MAX_T 999999
 
 struct Material{
     Color ac; //ambient color
@@ -44,6 +31,21 @@ struct Material{
     void SetIOR(const float& f) {ior = f;}
     
     ~Material(){}
+};
+
+struct HitInfo{
+    // bool hit;
+    vec3 hitPos;
+    vec3 hitNorm;
+    float t;
+    vec3 v;
+    int objI; //object index
+    Material m;
+    Color c;
+    // vec3 r;
+    // vec3 h;
+    // vec3 l;    
+    HitInfo():hitPos(vec3()),hitNorm(vec3()), t(MAX_T), v(vec3()), objI(-1), m(Material()), c(Color()) {}
 };
 
 struct Sphere {
@@ -69,8 +71,6 @@ public:
         float discr = b*b - 4*a*c;
         if (discr > 0) {
             float t = (-b + sqrt(discr))/(2*a);
-            // printf("t=%f\n",t);
-            // assert(false);
             if (t>MIN_T) return true;
             t = (-b - sqrt(discr))/(2*a);
             if (t>MIN_T) return true;
@@ -86,13 +86,16 @@ public:
         float c = dot(toStart,toStart) - r*r;
         float discr = b*b - 4*a*c;
         if (discr > 0){
-            float t = (-b + sqrt(discr))/(2*a);
-            t = (t>MIN_T)? t : (-b - sqrt(discr))/(2*a);
-            if (t>MIN_T){
-                hi.t=t;
-                hi.hitPos = p + t*d;
+            float t1 = (-b + sqrt(discr))/(2*a);
+            float t2 = (-b - sqrt(discr))/(2*a);
+            t1 = (t1 > MIN_T)? t1 : MAX_T;
+            t2 = (t2 > MIN_T)? t2 : MAX_T;
+            hi.t = (t1 < t2)? t1 : t2;
+            if (hi.t < MAX_T){                
+                hi.hitPos = p + hi.t*d;
                 hi.hitNorm = (hi.hitPos-pos).normalized();
                 hi.v = (-1)*d; //p - hi.hitPos;
+                hi.m = m;
                 return true;
             }         
         }
@@ -125,25 +128,6 @@ public:
         Color c3 = c1 + c2;
         Color c4 = c3*c;
         Color c5 = c4*fade_f;
-        // if (diffuse_a>0.2){
-        // printf("diff_a=%f\n",diffuse_a);
-        // printf("spec_a=%f\n",specular_a);
-        // printf("fade_f=%f\n",fade_f);
-        // // printf("n=%f,%f,%f\n",n.x,n.y,n.z);
-        // // printf("l=%f,%f,%f\n",l.x,l.y,l.z);
-        // // printf("h=%f,%f,%f\n",h.x,h.y,h.z);
-        // printf("m.dc=%f,%f,%f\n",m.dc.r,m.dc.g,m.dc.b);
-        // printf("m.sc=%f,%f,%f\n",m.sc.r,m.sc.g,m.sc.b);
-        // printf("m.sc=%f,%f,%f\n",m.sc.r,m.sc.g,m.sc.b);
-        // printf("c1=%f,%f,%f\n",c1.r,c1.g,c1.b);
-        // printf("c2=%f,%f,%f\n",c2.r,c2.g,c2.b);
-        // printf("c3=%f,%f,%f\n",c3.r,c3.g,c3.b);
-        // printf("c4=%f,%f,%f\n",c4.r,c4.g,c4.b);
-        // printf("c5=%f,%f,%f\n",c5.r,c5.g,c5.b);
-        // printf("c=%f,%f,%f\n",c.r,c.g,c.b);
-        // printf("c=%f,%f,%f\n",c_out.r,c_out.g,c_out.b);
-        // assert(false);
-        // }
         return c_out ;
     }
 };
