@@ -40,37 +40,41 @@ int main(int argc, char** argv){
   float halfW = imgW/2, halfH = imgH/2;
   float d = halfH / tanf(camera.fov_h * (M_PI / 180.0f));
   Ray ray;
-  ray.eye = camera.eye;
+  ray.p = camera.eye;
   ray.depth = max_depth;
 
   Image outputImg = Image(img_width,img_height);
   HitInfo hitInfo;
-
+  int sample_size = 10;
+  srand(time(NULL));
   auto t_start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < img_width; i++){
     for (int j = 0; j < img_height; j++){
-      float u = (halfW - (imgW)*(i/imgW));
-      float v = (halfH - (imgH)*(j/imgH));
-      vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
-      ray.dir = (p - camera.eye).normalized();  //Normalizing here is optional
-      
-      Color color;
-      if (scene.HitWInfo(ray.eye,ray.dir,hitInfo)){
-        // printf("ray = %f,%f,%f; raydir = %f,%f,%f\n",eye.x,eye.y,eye.z,rayDir.x,rayDir.y,rayDir.z);
-        // printf("hitNormal = %f,%f,%f\n",hitInfo.hitNorm.x,hitInfo.hitNorm.y,hitInfo.hitNorm.z);
-        // printf("v = %f,%f,%f\n",hitInfo.v.x,hitInfo.v.y,hitInfo.v.z);
-        // printf("hitpos = %f,%f,%f\n",hitInfo.hitPos.x,hitInfo.hitPos.y,hitInfo.hitPos.z);
-        // printf("sphere = %f,%f,%f, r = %f\n",scene.GetSphere(hitInfo.objI).pos.x,scene.GetSphere(hitInfo.objI).pos.y,scene.GetSphere(hitInfo.objI).pos.z,scene.GetSphere(hitInfo.objI).r);
-        // printf("color = %f,%f,%f\n",hitInfo.c.r,hitInfo.c.g,hitInfo.c.b);
-        // assert(false);
-        color = hitInfo.c;
-        hitInfo.t = MAX_T;
-      } else {
-        color = scene.GetBackground();
-        // printf("no hit\n");
-        // assert(false);
+      Color c_sum = Color(0,0,0);
+      for (int sidx = 0; sidx < sample_size; sidx++){
+        float jitter1 = (rand()%10)/10.0 - 0.5;
+        float jitter2 = (rand()%10)/10.0 - 0.5;
+        float u = (halfW - (imgW)*((i+jitter1)/imgW));
+        float v = (halfH - (imgH)*((j+jitter2)/imgH));
+        // float u = (halfW - (imgW)*(i/imgW));
+        // float v = (halfH - (imgH)*(j/imgH));
+        vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
+        ray.d = (p - camera.eye).normalized();  //Normalizing here is optional
+        
+        Color color;
+        if (scene.HitWInfo(ray,hitInfo)){
+          color = hitInfo.c;
+          hitInfo.t = MAX_T;
+        } else {
+          color = scene.GetBackground();
+          // printf("bg color=%f,%f,%f\n",color.r,color.g,color.b);
+          // assert(false);
+        }
+        c_sum = c_sum + color;
       }
-      outputImg.SetPixel(i,j, color);
+      c_sum = c_sum * (1.0/sample_size);
+      outputImg.SetPixel(i,j,c_sum);
+      // outputImg.SetPixel(i,j,color);
       //outputImg.setPixel(i,j, Color(fabs(i/imgW),fabs(j/imgH),fabs(0))); //TODO: Try this, what is it visualizing?
     }
   }

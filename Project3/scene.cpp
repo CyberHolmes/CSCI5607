@@ -69,21 +69,21 @@ Color Scene::GetBackground(){
     return background;
 };
 
-bool Scene::Hit (vec3 p, vec3 d, int objID){
+bool Scene::Hit (Ray ray, int objID){
     bool hit = false;
     for (int i=0; i<=numSpheres; i++){
         // if (i==objID) continue;
-        hit = spheres[i].Hit(p,d);
+        hit = spheres[i].Hit(ray);
         if (hit) break;
     }
     return hit;
 };
 
-bool Scene::HitWInfo (vec3 p, vec3 d, HitInfo& hi){
+bool Scene::HitWInfo (Ray ray, HitInfo& hi){
     HitInfo hi_temp=HitInfo();    
     bool hit = false;
     for (int i=0; i<=numSpheres; i++){
-        bool curHit = spheres[i].HitWInfo(p,d,hi_temp);
+        bool curHit = spheres[i].HitWInfo(ray,hi_temp);
         if (curHit && (hi_temp.t < hi.t)){
             // printf("sphere=%d, hit.t=%f, t0=%f\n",i, hi_temp.t, hi.t);
             hi = hi_temp;
@@ -98,12 +98,23 @@ bool Scene::HitWInfo (vec3 p, vec3 d, HitInfo& hi){
         c_out = c_out+ ambientlight*hi.m.ac;
         for (int i=0;i<numPointlights;i++){
             PointLight pl = pointlights[i];
+            Ray ray_temp = Ray(hi.hitPos, pl.p - hi.hitPos, 1);
             //check if the ray is blocked from the light source
-            if (!Hit(hi.hitPos, pl.p - hi.hitPos, hi.objI)){
+            if (!Hit(ray_temp, hi.objI)){
                 vec3 ldir = pl.p - hi.hitPos;
                 vec3 h = (1/(hi.v + ldir).length())*(hi.v + ldir);
                 c_out = c_out + pl.Shading(hi.m,hi.hitPos,hi.hitNorm,ldir,h);                
             }
+            
+        }
+        if (hi.rayDepth>0){
+            //Reflection
+            vec3 rdir = ray.d - 2 * dot(ray.d,hi.hitNorm) *hi.hitNorm;
+            Ray ray_next = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
+            HitInfo hi_next;
+            if (HitWInfo (ray_next, hi_next)){
+                c_out = c_out + hi.m.sc * hi_next.c;
+            };
         }
         hi.c = c_out;
     }

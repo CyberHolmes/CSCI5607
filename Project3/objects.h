@@ -40,12 +40,13 @@ struct HitInfo{
     float t;
     vec3 v;
     int objI; //object index
+    int rayDepth;
     Material m;
     Color c;
     // vec3 r;
     // vec3 h;
     // vec3 l;    
-    HitInfo():hitPos(vec3()),hitNorm(vec3()), t(MAX_T), v(vec3()), objI(-1), m(Material()), c(Color()) {}
+    HitInfo():hitPos(vec3()),hitNorm(vec3()), t(MAX_T), v(vec3()), objI(-1), rayDepth(0), m(Material()), c(Color()) {}
 };
 
 struct Sphere {
@@ -63,10 +64,10 @@ public:
     }
     ~Sphere(){}
     //Check for hit
-    bool Hit(vec3 p, vec3 d){
-        float a = dot(d,d); //TODO: What do we know about "a" if "dir" is normalized on creation?
-        vec3 toStart = (p - pos);
-        float b = 2 * dot(d,toStart);
+    bool Hit(Ray ray){
+        float a = dot(ray.d,ray.d); //TODO: What do we know about "a" if "dir" is normalized on creation?
+        vec3 toStart = (ray.p - pos);
+        float b = 2 * dot(ray.d,toStart);
         float c = dot(toStart,toStart) - r*r;
         float discr = b*b - 4*a*c;
         if (discr > 0) {
@@ -78,11 +79,11 @@ public:
         return false;
     }
     //Check for hit
-    bool HitWInfo(vec3 p, vec3 d, HitInfo& hi){
+    bool HitWInfo(Ray ray, HitInfo& hi){
         // d = d.normalized();
-        float a = dot(d,d); //TODO: What do we know about "a" if "dir" is normalized on creation?
-        vec3 toStart = (p - pos);
-        float b = 2 * dot(d,toStart);
+        float a = dot(ray.d,ray.d);
+        vec3 toStart = (ray.p - pos);
+        float b = 2 * dot(ray.d,toStart);
         float c = dot(toStart,toStart) - r*r;
         float discr = b*b - 4*a*c;
         if (discr > 0){
@@ -92,10 +93,11 @@ public:
             t2 = (t2 > MIN_T)? t2 : MAX_T;
             hi.t = (t1 < t2)? t1 : t2;
             if (hi.t < MAX_T){                
-                hi.hitPos = p + hi.t*d;
+                hi.hitPos = ray.p + hi.t*ray.d;
                 hi.hitNorm = (hi.hitPos-pos).normalized();
-                hi.v = (-1)*d; //p - hi.hitPos;
+                hi.v = (-1)*ray.d; //p - hi.hitPos;
                 hi.m = m;
+                hi.rayDepth = ray.depth;
                 return true;
             }         
         }

@@ -5,9 +5,11 @@
 // #include "image_lib.h"
 
 struct Ray{
-    vec3 eye;
-    vec3 dir;
+    vec3 p;
+    vec3 d;
     int depth;
+    Ray() : p(vec3()), d(vec3()), depth(0) {}
+    Ray(vec3 p_, vec3 d_, int depth_) : p(p_), d(d_), depth(depth_) {}
 };
 
 #endif
