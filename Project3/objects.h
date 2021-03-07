@@ -116,22 +116,35 @@ public:
         c(c_),p(p_) {}
     ~PointLight() {}
 
-    //Shading
-    Color Shading(Material m, vec3 p0, vec3 n, vec3 l, vec3 h){
-        float diffuse_a = dot(n.normalized(),l.normalized());
+    //
+    Color Shading(HitInfo hi){
+        vec3 l = p - hi.hitPos;
+        vec3 h = (1/(hi.v + l).length())*(hi.v + l);
+        float diffuse_a = dot(hi.hitNorm.normalized(),l.normalized());
         diffuse_a = (diffuse_a>0)? diffuse_a : 0;
-        float specular_a = dot(n.normalized(),h.normalized());
-        specular_a = (specular_a>0)? pow(specular_a,m.ns) : 0;
-        float fade_f = 1/((p.x-p0.x)*(p.x-p0.x)+(p.y-p0.y)*(p.y-p0.y)+(p.z-p0.z)*(p.z-p0.z));
+        float specular_a = dot(hi.hitNorm.normalized(),h.normalized());
+        specular_a = (specular_a>0)? pow(specular_a,hi.m.ns) : 0;
+        float fade_f = 1/((p.x-hi.hitPos.x)*(p.x-hi.hitPos.x)+(p.y-hi.hitPos.y)*(p.y-hi.hitPos.y)+(p.z-hi.hitPos.z)*(p.z-hi.hitPos.z));
         
-        Color c_out = (m.dc * diffuse_a + m.sc * specular_a) * c * fade_f ;
-        Color c1 = m.dc * diffuse_a;
-        Color c2 = m.sc * specular_a;
-        Color c3 = c1 + c2;
-        Color c4 = c3*c;
-        Color c5 = c4*fade_f;
+        Color c_out = (hi.m.dc * diffuse_a + hi.m.sc * specular_a) * c * fade_f ;
         return c_out ;
     }
+    //Shading
+    // Color Shading(Material m, vec3 p0, vec3 n, vec3 l, vec3 h){
+    //     float diffuse_a = dot(n.normalized(),l.normalized());
+    //     diffuse_a = (diffuse_a>0)? diffuse_a : 0;
+    //     float specular_a = dot(n.normalized(),h.normalized());
+    //     specular_a = (specular_a>0)? pow(specular_a,m.ns) : 0;
+    //     float fade_f = 1/((p.x-p0.x)*(p.x-p0.x)+(p.y-p0.y)*(p.y-p0.y)+(p.z-p0.z)*(p.z-p0.z));
+        
+    //     Color c_out = (m.dc * diffuse_a + m.sc * specular_a) * c * fade_f ;
+    //     Color c1 = m.dc * diffuse_a;
+    //     Color c2 = m.sc * specular_a;
+    //     Color c3 = c1 + c2;
+    //     Color c4 = c3*c;
+    //     Color c5 = c4*fade_f;
+    //     return c_out ;
+    // }
 };
 
 struct SpotLight {
@@ -145,7 +158,27 @@ struct SpotLight {
         c(c_),p(p_),d(d_),a1(a1_),a2(a2_) {}
     ~SpotLight(){}
 
-    
+    Color Shading(HitInfo hi){
+        Color c_out;
+        vec3 l = p - hi.hitPos;
+        vec3 h = (1/(hi.v + l).length())*(hi.v + l);
+        // angle between the direction of the light and the direction to the hit
+        float angle = dot((-1)*l.normalized(), d.normalized());
+        // check which side the hit direction is on
+        vec3 v_temp = cross(d.normalized(), l.normalized());
+        float a = (dot(v_temp, vec3(0,1,0))>0)? a1 : a2; //assume camera will never be upside down
+        if (angle > a){
+            float diffuse_a = dot(hi.hitNorm.normalized(),l.normalized());
+            diffuse_a = (diffuse_a>0)? diffuse_a : 0;
+            float specular_a = dot(hi.hitNorm.normalized(),h.normalized());
+            specular_a = (specular_a>0)? pow(specular_a,hi.m.ns) : 0;
+            float fade_f = 1/((p.x-hi.hitPos.x)*(p.x-hi.hitPos.x)+(p.y-hi.hitPos.y)*(p.y-hi.hitPos.y)+(p.z-hi.hitPos.z)*(p.z-hi.hitPos.z));            
+            c_out = (hi.m.dc * diffuse_a + hi.m.sc * specular_a) * c * fade_f ;
+        } else {
+            c_out = Color(0,0,0);
+        }
+        return c_out ;
+    }    
 };
 
 struct DirectionalLight {
@@ -156,6 +189,17 @@ struct DirectionalLight {
     DirectionalLight(Color c_, vec3 d_):
         c(c_),d(d_) {}
     ~DirectionalLight(){}
+    //shading function
+    Color Shading(HitInfo hi){
+        vec3 h = (1/(hi.v + d).length())*(hi.v + d);
+        float diffuse_a = dot(hi.hitNorm.normalized(),d.normalized());
+        diffuse_a = (diffuse_a>0)? diffuse_a : 0;
+        float specular_a = dot(hi.hitNorm.normalized(),h.normalized());
+        specular_a = (specular_a>0)? pow(specular_a,hi.m.ns) : 0;
+        
+        Color c_out = (hi.m.dc * diffuse_a + hi.m.sc * specular_a) * c ;
+        return c_out ;
+    }
 };
 
 struct AmbientLight {

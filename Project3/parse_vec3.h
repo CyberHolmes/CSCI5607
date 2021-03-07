@@ -14,6 +14,7 @@
 #include "camera.h"
 
 #define MAX_LEN 1024
+#define PI 3.14159265
 
 //Camera & Scene Parmaters (Global Variables)
 //Here we set default values, override them in parseSceneFile()
@@ -33,7 +34,7 @@ std::string imgName = "raytraced.png";
 
 int max_depth = 5;
 
-void parseSceneFile(std::string fileName, Scene& scene, Camera& camera){
+void parseSceneFile(std::string fileName, Scene& scene, Camera& camera, int& sample_size){
   FILE *fp;
   long length;
   char line[MAX_LEN]; //assume no line is longer than 1024 characters
@@ -107,6 +108,8 @@ void parseSceneFile(std::string fileName, Scene& scene, Camera& camera){
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;
       sscanf(line, "spot_light: %f %f %f %f %f %f %f %f %f %f %f",&r,&g,&b,&px,&py,&pz,&dx,&dy,&dz,&a1,&a2);
+      a1 = cos(a1*PI/180.0); //convert once at the file load, so that this can be directly compared to dot product
+      a2 = cos(a2*PI/180.0);
       scene.AddSpotlight(SpotLight(Color(r,g,b),vec3(px,py,pz),vec3(dx,dy,dz),a1,a2));
       // numSlights++;    
     }
@@ -137,11 +140,12 @@ void parseSceneFile(std::string fileName, Scene& scene, Camera& camera){
       float x;
       sscanf(line, "camera_fov_ha: %f",&x);
       camera.fov_h = x;
-      // halfAngleVFOV = halfAngleVFOV/2;
     }
     if (!strcmp(command, "max_depth:")){ //camera_fov_ha: 35
       sscanf(line, "max_depth: %n",&max_depth);
-      // halfAngleVFOV = halfAngleVFOV/2;
+    }
+    if (!strcmp(command, "sample_size:")){ //camera_fov_ha: 35
+      sscanf(line, "sample_size: %n",&sample_size);
     }
   }
 

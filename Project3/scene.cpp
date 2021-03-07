@@ -69,7 +69,7 @@ Color Scene::GetBackground(){
     return background;
 };
 
-bool Scene::Hit (Ray ray, int objID){
+bool Scene::Hit (Ray ray){
     bool hit = false;
     for (int i=0; i<=numSpheres; i++){
         // if (i==objID) continue;
@@ -96,25 +96,57 @@ bool Scene::HitWInfo (Ray ray, HitInfo& hi){
     if (hit){
         Color c_out;
         c_out = c_out+ ambientlight*hi.m.ac;
+        //Point light sources
         for (int i=0;i<numPointlights;i++){
             PointLight pl = pointlights[i];
             Ray ray_temp = Ray(hi.hitPos, pl.p - hi.hitPos, 1);
             //check if the ray is blocked from the light source
-            if (!Hit(ray_temp, hi.objI)){
-                vec3 ldir = pl.p - hi.hitPos;
-                vec3 h = (1/(hi.v + ldir).length())*(hi.v + ldir);
-                c_out = c_out + pl.Shading(hi.m,hi.hitPos,hi.hitNorm,ldir,h);                
+            if (!Hit(ray_temp)){
+                // vec3 ldir = pl.p - hi.hitPos;
+                // vec3 h = (1/(hi.v + ldir).length())*(hi.v + ldir);
+                // c_out = c_out + pl.Shading(hi.m,hi.hitPos,hi.hitNorm,ldir,h);
+                c_out = c_out + pl.Shading(hi);           
             }
             
         }
+        //Directional light sources
+        for (int i = 0; i < numDirlights; i++){
+            DirectionalLight dl = dirlights[i];
+            if (dot(dl.d,hi.hitNorm)!=1){ //
+                Ray ray_temp = Ray(hi.hitPos, dl.d, 1);
+                if (!Hit(ray_temp)){
+                    c_out = c_out + dl.Shading(hi);                
+                }
+            }            
+        }
+        //Spot light sources
+        for (int i = 0; i < numSpotlights; i++){
+            SpotLight sl = spotlights[i];
+            Ray ray_temp = Ray(hi.hitPos, sl.p - hi.hitPos, 1);
+            //check if the ray is blocked from the light source
+            if (!Hit(ray_temp)){
+                c_out = c_out + sl.Shading(hi);           
+            }           
+        }
+        //Recursion when ray depth is not zero
         if (hi.rayDepth>0){
+            float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
             //Reflection
-            vec3 rdir = ray.d - 2 * dot(ray.d,hi.hitNorm) *hi.hitNorm;
+            vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
             Ray ray_next = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
             HitInfo hi_next;
             if (HitWInfo (ray_next, hi_next)){
                 c_out = c_out + hi.m.sc * hi_next.c;
             };
+            //Refraction
+            float rf_term = 1 - (1 - ctheta*ctheta)/(hi.m.ior * hi.m.ior);
+            if (rf_term > 0) { //there is refration
+                rdir = (1/hi.m.ior) * (ray.d - ctheta * hi.hitNorm)  - sqrt(rf_term) * hi.hitNorm;
+                ray_next = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
+                if (HitWInfo (ray_next, hi_next)){
+                    c_out = c_out + hi.m.tc * hi_next.c;
+                };
+            }
         }
         hi.c = c_out;
     }

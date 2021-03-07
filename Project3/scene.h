@@ -44,7 +44,7 @@ public:
 
     //Given a point and a direction, check for if any object is in the direction
     //Return bool
-    bool Hit(Ray ray,int);
+    bool Hit(Ray ray);
     //Given a point and a direction, check for the closest hit, return information
     bool HitWInfo(Ray ray, HitInfo&);
 };

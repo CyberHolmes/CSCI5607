@@ -32,9 +32,10 @@ int main(int argc, char** argv){
 
   Scene scene = Scene();
   Camera camera;
+  int sample_size = 10;
 
   //Parse Scene File
-  parseSceneFile(secenFileName, scene, camera);
+  parseSceneFile(secenFileName, scene, camera, sample_size);
 
   float imgW = img_width, imgH = img_height;
   float halfW = imgW/2, halfH = imgH/2;
@@ -45,19 +46,23 @@ int main(int argc, char** argv){
 
   Image outputImg = Image(img_width,img_height);
   HitInfo hitInfo;
-  int sample_size = 10;
+  
   srand(time(NULL));
   auto t_start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < img_width; i++){
     for (int j = 0; j < img_height; j++){
       Color c_sum = Color(0,0,0);
       for (int sidx = 0; sidx < sample_size; sidx++){
-        float jitter1 = (rand()%10)/10.0 - 0.5;
-        float jitter2 = (rand()%10)/10.0 - 0.5;
-        float u = (halfW - (imgW)*((i+jitter1)/imgW));
-        float v = (halfH - (imgH)*((j+jitter2)/imgH));
-        // float u = (halfW - (imgW)*(i/imgW));
-        // float v = (halfH - (imgH)*(j/imgH));
+        float u,v;
+        if (sample_size>3){
+          float jitter1 = (rand()%10)/10.0 - 0.5;
+          float jitter2 = (rand()%10)/10.0 - 0.5;
+          u = (halfW - (imgW)*((i+jitter1)/imgW));
+          v = (halfH - (imgH)*((j+jitter2)/imgH));
+        } else{
+          u = (halfW - (imgW)*(i/imgW));
+          v = (halfH - (imgH)*(j/imgH));
+        }
         vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
         ray.d = (p - camera.eye).normalized();  //Normalizing here is optional
         
