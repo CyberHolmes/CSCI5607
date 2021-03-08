@@ -191,8 +191,8 @@ struct DirectionalLight {
     ~DirectionalLight(){}
     //shading function
     Color Shading(HitInfo hi){
-        vec3 h = (1/(hi.v + d).length())*(hi.v + d);
-        float diffuse_a = dot(hi.hitNorm.normalized(),d.normalized());
+        vec3 h = (1/(hi.v + -d).length())*(hi.v + -d);
+        float diffuse_a = dot(hi.hitNorm.normalized(),-d.normalized());
         diffuse_a = (diffuse_a>0)? diffuse_a : 0;
         float specular_a = dot(hi.hitNorm.normalized(),h.normalized());
         specular_a = (specular_a>0)? pow(specular_a,hi.m.ns) : 0;

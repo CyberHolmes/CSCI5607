@@ -113,7 +113,7 @@ bool Scene::HitWInfo (Ray ray, HitInfo& hi){
         for (int i = 0; i < numDirlights; i++){
             DirectionalLight dl = dirlights[i];
             if (dot(dl.d,hi.hitNorm)!=1){ //
-                Ray ray_temp = Ray(hi.hitPos, dl.d, 1);
+                Ray ray_temp = Ray(hi.hitPos, -dl.d, 1);
                 if (!Hit(ray_temp)){
                     c_out = c_out + dl.Shading(hi);                
                 }
