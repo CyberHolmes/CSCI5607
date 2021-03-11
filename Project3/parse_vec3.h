@@ -48,11 +48,6 @@ void parseSceneFile(std::string fileName, Scene& scene, Camera& camera, int& sam
     exit(1);
   }
 
-  //get file size
-  // fseek(fp,0,SEEK_END); //move position to the end
-  // length =ftell(fp); //value of current position
-  // printf("File '%s' is %ld bytes long.\n\n",fileName.c_str(),length);
-  // fseek(fp,0, SEEK_SET); //Move position to the start
   Material m = Material();
   //read each line
   while (fgets(line, MAX_LEN, fp)){
@@ -80,38 +75,35 @@ void parseSceneFile(std::string fileName, Scene& scene, Camera& camera, int& sam
       float x,y,z,r;
       sscanf(line, "sphere: %f %f %f %f",&x,&y,&z,&r);
       vec3 v=vec3(x,y,z);
-      scene.AddSphere(Sphere(v,r,m));
-      // numSpheres++;       
+      Sphere* s = new Sphere(m,v,r);
+      scene.AddObject(s);  
     }
     if (!strcmp(command, "background:")){ //sphere: -3 1 0 0.7
       float r,g,b;
       sscanf(line, "background: %f %f %f",&r,&g,&b);
-      scene.SetBackColor(Color(r,g,b));      
+      scene.SetBackground(Color(r,g,b));      
     }
     if (!strcmp(command, "ambient_light:")){ //sphere: -3 1 0 0.7
       float r,g,b;
       sscanf(line, "ambient_light: %f %f %f",&r,&g,&b);
-      scene.SetAmbientLight(Color(r,g,b));    
+      scene.SetAmbientlight(Color(r,g,b));    
     }
     if (!strcmp(command, "directional_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,x,y,z;
       sscanf(line, "directional_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
-      scene.AddDirlight(DirectionalLight(Color(r,g,b),vec3(x,y,z)));
-      // numDlights++;    
+      scene.AddLight(new DirectionLight(Color(r,g,b),vec3(x,y,z)));  
     }
     if (!strcmp(command, "point_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,x,y,z;
       sscanf(line, "point_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
-      scene.AddPointlight(PointLight(Color(r,g,b),vec3(x,y,z)));
-      // numPlights++;    
+      scene.AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));   
     }
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;
       sscanf(line, "spot_light: %f %f %f %f %f %f %f %f %f %f %f",&r,&g,&b,&px,&py,&pz,&dx,&dy,&dz,&a1,&a2);
       a1 = cos(a1*PI/180.0); //convert once at the file load, so that this can be directly compared to dot product
       a2 = cos(a2*PI/180.0);
-      scene.AddSpotlight(SpotLight(Color(r,g,b),vec3(px,py,pz),vec3(dx,dy,dz),a1,a2));
-      // numSlights++;    
+      scene.AddLight(new SpotLight(Color(r,g,b),vec3(px,py,pz),vec3(dx,dy,dz),a1,a2));
     }
     if (!strcmp(command, "film_resolution:")){ //image_resolution: 500 300
       sscanf(line, "film_resolution: %d %d",&img_width,&img_height);
@@ -142,13 +134,12 @@ void parseSceneFile(std::string fileName, Scene& scene, Camera& camera, int& sam
       camera.fov_h = x;
     }
     if (!strcmp(command, "max_depth:")){ //camera_fov_ha: 35
-      sscanf(line, "max_depth: %n",&max_depth);
+      sscanf(line, "max_depth: %d",&max_depth);
     }
     if (!strcmp(command, "sample_size:")){ //camera_fov_ha: 35
-      sscanf(line, "sample_size: %n",&sample_size);
+      sscanf(line, "sample_size: %d",&sample_size);
     }
   }
-
   //Create an orthagonal camera basis
   camera.forward = camera.forward.normalized();
   camera.up = (camera.up - dot(camera.up,camera.forward)*camera.forward).normalized();

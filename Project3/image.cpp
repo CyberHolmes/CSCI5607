@@ -49,7 +49,7 @@ Color& Image::GetPixel(int i, int j){
     return pixels[i+j*width];
 }
 
-    uint8_t* Image::ToBytes(){
+uint8_t* Image::ToBytes(){
     uint8_t* rawPixels = new uint8_t[width*height*4];
     for (int i = 0; i < width; i++){
         for (int j = 0; j < height; j++){

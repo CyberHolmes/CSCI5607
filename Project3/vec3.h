@@ -17,13 +17,14 @@ struct vec3{
     return vec3(fmin(x,1),fmin(y,1),fmin(z,1));
   }
 
-  //Compute vector length (you may also want length squared)
+  //Compute vector length
   float length(){
     return sqrt(x*x+y*y+z*z);
   }
 
-  float mag(){
-    return (x*x+y*y+z*z);
+  //Compute vector length squared
+  float lengthsq(){
+    return x*x+y*y+z*z;
   }
 
   //Create a unit-length vector
@@ -36,7 +37,7 @@ struct vec3{
 
 //Multiply float and vector
 //TODO: you probably also want to multiply vector and float
-inline vec3 operator*(float f, vec3 a){
+inline const vec3 operator*(const float f, const vec3 a){
   return vec3(a.x*f,a.y*f,a.z*f);
 }
 
@@ -45,7 +46,7 @@ inline vec3 operator-(vec3 a){
 }
 
 //Vector-vector dot product
-inline float dot(vec3 a, vec3 b){
+inline const float dot(const vec3 a, const vec3 b){
   return a.x*b.x + a.y*b.y + a.z*b.z;
 }
 
@@ -62,6 +63,14 @@ inline vec3 operator+(vec3 a, vec3 b){
 //Vector subtraction
 inline vec3 operator-(vec3 a, vec3 b){
   return vec3(a.x-b.x, a.y-b.y, a.z-b.z);
+}
+
+inline float Distance(vec3 a, vec3 b){
+  return (a-b).length();
+}
+
+inline float Area(vec3 a, vec3 b, vec3 c){
+  return cross(a-b,c-b).length()/2.0;
 }
 
 #endif

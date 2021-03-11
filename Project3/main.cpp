@@ -20,6 +20,45 @@
 #include "objects.h"
 #include "ray.h"
 #include <math.h>
+#include <set>
+
+float rand_n1(){
+  return (rand()%100-50)/100.0;
+}
+
+Color ComputeColor(const Camera& camera, Scene &scene, const float &d, int sample_size, const float &imgW, const float &imgH, Ray &ray, const int &i, const int &j){
+  HitInfo hitInfo =HitInfo();
+  Color c_sum = Color(0,0,0);
+  Color c_sum_p = Color(1,1,1);
+  float diff = 1;
+  int k=0;
+
+  while ((k<3) || ((k<sample_size) && (diff > 0.01))){
+    float u = (imgW/2.0 - imgW*((i+(k>0)*rand_n1())/imgW));
+    float v = (imgH/2.0 - imgH*((j+(k>0)*rand_n1())/imgH));
+    vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
+    ray.d = (p - camera.eye).normalized();  //Normalizing here is optional
+
+    Color color = scene.EvaluateRayTree(ray);
+
+    c_sum = c_sum + color;
+    diff = c_sum.diff(c_sum_p);
+    c_sum_p = c_sum;
+    k++;    
+  }
+  c_sum = c_sum * (1.0/k);
+  return c_sum;
+}
+
+Color ComputeColor(const Camera& camera, Scene &scene, const float &d, const float &imgW, const float &imgH, Ray &ray, const int &i, const int &j){
+  HitInfo hitInfo= HitInfo();
+    float u = (imgW/2.0 - (imgW)*((i)/imgW));
+    float v = (imgH/2.0 - (imgH)*((j)/imgH));
+    vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
+    ray.d = (p - camera.eye).normalized();  //Normalizing here is optional
+    Color color = scene.EvaluateRayTree(ray);
+  return color;
+}
 
 int main(int argc, char** argv){
 
@@ -47,47 +86,23 @@ int main(int argc, char** argv){
   Image outputImg = Image(img_width,img_height);
   HitInfo hitInfo;
   
-  srand(time(NULL));
+  
   auto t_start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < img_width; i++){
     for (int j = 0; j < img_height; j++){
-      Color c_sum = Color(0,0,0);
-      for (int sidx = 0; sidx < sample_size; sidx++){
-        float u,v;
-        if (sample_size>3){
-          float jitter1 = (rand()%10)/10.0 - 0.5;
-          float jitter2 = (rand()%10)/10.0 - 0.5;
-          u = (halfW - (imgW)*((i+jitter1)/imgW));
-          v = (halfH - (imgH)*((j+jitter2)/imgH));
-        } else{
-          u = (halfW - (imgW)*(i/imgW));
-          v = (halfH - (imgH)*(j/imgH));
-        }
-        vec3 p = camera.eye - d*camera.forward + u*camera.right + v*camera.up;
-        ray.d = (p - camera.eye).normalized();  //Normalizing here is optional
-        
-        Color color;
-        if (scene.HitWInfo(ray,hitInfo)){
-          color = hitInfo.c;
-          hitInfo.t = MAX_T;
-        } else {
-          color = scene.GetBackground();
-          // printf("bg color=%f,%f,%f\n",color.r,color.g,color.b);
-          // assert(false);
-        }
-        c_sum = c_sum + color;
+      Color color;
+      if (sample_size>1){
+        color = ComputeColor(camera, scene, d, sample_size, imgW, imgH, ray, i, j);
+      } else {
+        color = ComputeColor(camera, scene, d, imgW, imgH, ray, i, j);
       }
-      c_sum = c_sum * (1.0/sample_size);
-      outputImg.SetPixel(i,j,c_sum);
-      // outputImg.SetPixel(i,j,color);
-      //outputImg.setPixel(i,j, Color(fabs(i/imgW),fabs(j/imgH),fabs(0))); //TODO: Try this, what is it visualizing?
+
+      outputImg.SetPixel(i,j,color);
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
   printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
   outputImg.Write(imgName.c_str());
-  // delete scene;
-  // scene = nullptr;
   return 0;
 }

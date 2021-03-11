@@ -16,6 +16,13 @@ struct Color{
   Color operator* (float f){
     return Color(r * f, g * f, b * f);
   };
+  float luminance(){
+    return 0.299*r + 0.587*g + 0.114*b;
+  }
+  float diff(Color& c){
+    float t = luminance()-c.luminance();
+    return (t>0)?t:-t;
+  }
 };
 
 #endif

@@ -3,50 +3,44 @@
 
 #include "objects.h"
 #include <vector>
+#include <memory>
 
 class Scene{
-    std::vector<Sphere> spheres;
-    std::vector<PointLight> pointlights;
-    std::vector<DirectionalLight> dirlights;
-    std::vector<SpotLight> spotlights;
     Color ambientlight;
     Color background;
-    int numSpheres;
-    int numPointlights;
-    int numDirlights;
-    int numSpotlights;
+    int numObj;
+    int numLights;
+    std::vector<Obj*> objects;
+    std::vector<Light*> lights;
+
 public:
-    //constructor
-    Scene();
-    //destructor
-    ~Scene() {};
-
-    //Add object
-    void AddSphere(Sphere);
-    void AddSpotlight(SpotLight);
-    void AddPointlight(PointLight);
-    void AddDirlight(DirectionalLight);
-    void SetBackColor(Color);
-    void SetAmbientLight(Color);
-
-    //Get
-    // inline Sphere& GetSphere(int);
-    Sphere GetSphere(int);
-    PointLight GetPointlight(int);
-    SpotLight GetSpotLight(int);
-    DirectionalLight GetDirLight(int);
-    int GetNumSpheres();
-    int GetNumPointLight();
-    int GetNumSpotLight();
-    int GetNumDirLight();
+    Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0){
+        objects.reserve(100);
+        lights.reserve(20);
+    };
+    ~Scene() {
+        for ( auto const& obj : objects) {
+            delete obj;
+        }
+        for ( auto const& l : lights) {
+            delete l;
+        }
+    };
+    void AddObject(Obj*);
+    Obj* GetObject(int);
+    void AddLight(Light*);
+    Light* GetLight(int);
+    int GetNumObjects();
+    int GetNumLights();
     Color GetAmbientLight();
     Color GetBackground();
-
-    //Given a point and a direction, check for if any object is in the direction
-    //Return bool
-    bool Hit(Ray ray);
+    void SetBackground(Color);
+    void SetAmbientlight(Color);    
     //Given a point and a direction, check for the closest hit, return information
-    bool HitWInfo(Ray ray, HitInfo&);
+    bool Hit(const Ray& ray, HitInfo&);
+
+    Color ApplyLightingModel (Ray& ray, HitInfo& hi);
+    Color EvaluateRayTree(Ray& ray);
 };
 
 #endif
