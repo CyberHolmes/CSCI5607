@@ -305,7 +305,7 @@ int main(int argc, char *argv[]){
             done = true; //Exit event loop
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) //If "f" is pressed
             fullscreen = !fullscreen;
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) //If "o" is pressed
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "b" is pressed
          {
             tm = localtime(&t);
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
