@@ -26,7 +26,7 @@ bool Sphere::Hit(Ray ray, HitInfo& hi) {
 
 Color PointLight::Shading(HitInfo hi) {
     vec3 l = (p - hi.hitPos).normalized();
-    vec3 h = (1/(hi.v + l).length())*(hi.v + l);
+    vec3 h = (1.0/(hi.v + l).length())*(hi.v + l);
     float diffuse_a = dot(hi.hitNorm,l);
     diffuse_a = (diffuse_a>0)? diffuse_a : 0;
     float specular_a = dot(hi.hitNorm,h.normalized());
@@ -42,21 +42,24 @@ vec3 PointLight::CalDir(vec3 p0){
 }
 
 Color SpotLight::Shading(HitInfo hi) {
+
     Color c_out;
-    vec3 l = p - hi.hitPos;
-    vec3 h = (1/(hi.v + l).length())*(hi.v + l);
+    vec3 ldir = (p - hi.hitPos).normalized(); //direction to the light    
+
+    vec3 h = (1.0/(hi.v + ldir).length())*(hi.v + ldir);
     // angle between the direction of the light and the direction to the hit
-    float angle = dot((-1)*l.normalized(), d.normalized());
-    // check which side the hit direction is on
-    vec3 v_temp = cross(d.normalized(), l.normalized());
-    float a = (dot(v_temp, vec3(0,1,0))>0)? a1 : a2; //assume camera will never be upside down
-    if (angle > a){
-        float diffuse_a = dot(hi.hitNorm.normalized(),l.normalized());
+    float angle = dot(-ldir.normalized(), d.normalized());
+
+    if (angle>0 && angle > a2){
+        float term = (angle<a1)?(1.0-(a1-angle)/(a1-a2)) : 1.0;
+        float diffuse_a = dot(hi.hitNorm,ldir);
+        // float diffuse_a = dot(-d.normalized(),ldir);
         diffuse_a = (diffuse_a>0)? diffuse_a : 0;
-        float specular_a = dot(hi.hitNorm.normalized(),h.normalized());
+        float specular_a = dot(hi.hitNorm,h.normalized());
+        // float specular_a = dot(-d.normalized(),h.normalized());
         specular_a = (specular_a>0)? pow(specular_a,hi.m.ns) : 0;
         float fade_f = 1/((p.x-hi.hitPos.x)*(p.x-hi.hitPos.x)+(p.y-hi.hitPos.y)*(p.y-hi.hitPos.y)+(p.z-hi.hitPos.z)*(p.z-hi.hitPos.z));            
-        c_out = (hi.m.dc * diffuse_a + hi.m.sc * specular_a) * c * fade_f ;
+        c_out = (hi.m.dc * diffuse_a + hi.m.sc * specular_a) * c * fade_f *term ;
     } else {
         c_out = Color(0,0,0);
     }

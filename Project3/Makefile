@@ -5,7 +5,7 @@
 #g++ -fsanitize=address -std=c++14
 
 ray: main.o image.o scene.o objects.o
-	g++ -std=c++14 -O3 main.o image.o scene.o objects.o -o ray
+	g++ -std=c++14 -O3 main.o image.o scene.o objects.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray
 
 main.o: main.cpp
 	g++ -std=c++14 -O3 main.cpp -c
@@ -20,4 +20,4 @@ objects.o: objects.cpp
 	g++ -std=c++14 -O3 objects.cpp -c
 
 clean:
-	rm -f *.o image
+	rm -f *.o ray

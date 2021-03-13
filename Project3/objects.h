@@ -5,9 +5,11 @@
 #include "image.h"
 #include "ray.h"
 #include <assert.h>
+// #include "camera.h"
 
 #define MIN_T 0.0001
 #define MAX_T 999999
+// extern Camera* camera;
 
 struct Material{
     Color ac; //ambient color
@@ -17,7 +19,7 @@ struct Material{
     Color tc; //transmisive color
     float ior; //index of reflection
     //constructor
-    Material() : ac(0,0,0), dc(0,0,0), sc(0,0,0), ns(0), tc(0,0,0), ior(0.0) {}
+    Material() : ac(0,0,0), dc(1,1,1), sc(0,0,0), ns(5), tc(0,0,0), ior(0.0) {}
     Material(Color ac_, Color dc_, Color sc_, int ns_, Color tc_, float ior_):
         ac(ac_), dc(dc_), sc(sc_), ns(ns_), tc(tc_), ior(ior_) {}
 
@@ -62,14 +64,6 @@ public:
     Sphere(Material m_, vec3 pos_, float r_) : Obj(m_), pos(pos_), r(r_) {}
     ~Sphere();
     bool Hit(Ray, HitInfo&) override;
-};
-
-class Triangle : public Obj{
-    vec3 v1,v2,v3;
-};
-
-class CSG_Union : public Obj{
-    Obj obj1, obj2;
 };
 
 enum LightType: unsigned char{
