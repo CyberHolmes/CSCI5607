@@ -1,0 +1,110 @@
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/triangle.txt 
+Rendering took 65.47 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/outdoor.txt 
+Rendering took 821.23 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/test_reasonable.txt 
+Rendering took 1846.03 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make clean
+rm -f *.o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make
+g++ -std=c++14 -O3 main.cpp -c
+g++ -std=c++14 -O3 image.cpp image.h -c
+g++ -std=c++14 -O3 scene.cpp -c
+g++ -std=c++14 -O3 objects.cpp -c
+g++ -std=c++14 -O3 main.o image.o scene.o objects.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/bottle.txt
+Rendering took 97040.79 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make clean
+rm -f *.o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make
+g++ -std=c++14 -O3 main.cpp -c
+g++ -std=c++14 -O3 image.cpp image.h -c
+g++ -std=c++14 -O3 scene.cpp -c
+g++ -std=c++14 -O3 objects.cpp -c
+g++ -std=c++14 -O3 main.o image.o scene.o objects.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/bottle.txt
+Rendering took 100063.42 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make clean
+rm -f *.o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ make
+g++ -std=c++14 -O3 main.cpp -c
+g++ -std=c++14 -O3 image.cpp image.h -c
+g++ -std=c++14 -O3 scene.cpp -c
+g++ -std=c++14 -O3 objects.cpp -c
+g++ -std=c++14 -O3 main.o image.o scene.o objects.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/ShadowTest.txt 
+Rendering took 9636.37 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/arm-top.txt 
+Rendering took 731367.53 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/triangle.txt 
+Rendering took 66.19 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/outdoor.txt 
+Rendering took 819.77 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/test_reasonable.txt 
+Rendering took 1859.71 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/arm-reach.txt 
+^C
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/gear.txt 
+Rendering took 1245531.39 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/arm-reach.txt 
+Rendering took 1395475.28 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/plant-h.txt 
+Rendering took 2073874.10 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
+(base) hailin@hailin-XPS-8940-2:~/MSCS/github/working11$ ./ray ./Scenes/bottle-nolabel.txt 
+Rendering took 136699.44 ms
+OpenGL loaded
+Vendor:   NVIDIA Corporation
+Renderer: GeForce GTX 1660 Ti/PCIe/SSE2
+Version:  3.2.0 NVIDIA 460.39
