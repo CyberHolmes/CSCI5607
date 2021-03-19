@@ -21,12 +21,12 @@ struct vec3{
   }
 
   //Compute vector length
-  float length(){
+  long double length(){
     return sqrt(x*x+y*y+z*z);
   }
 
   //Compute vector length squared
-  float lengthsq(){
+  long double lengthsq(){
     return x*x+y*y+z*z;
   }
 
@@ -71,8 +71,8 @@ inline float Distance(vec3 a, vec3 b){
   return (a-b).length();
 }
 
-inline double Area(vec3 a, vec3 b, vec3 c){
-  return cross(a-b,c-b).length()/2.0;
+inline long double Area(vec3 a, vec3 b, vec3 c){
+  return (long double)cross(a-b,c-b).length()/2.0;
 }
 
 inline vec3 Centroid(vec3 a, vec3 b, vec3 c){

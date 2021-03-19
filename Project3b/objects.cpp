@@ -113,16 +113,16 @@ bool TriangleNormal::Hit(Ray ray, HitInfo& hi){
 
     vec3 p0 = ray.p + t * ray.d; // intercept point
     //check if the point is inside triangle
-    float a = Area(v1,v2,v3);
-    float a3 = Area(v1, p0, v2)/a;
-    float a1 = Area(v2, p0, v3)/a;
-    float a2 = Area(v1, p0, v3)/a;    
+    long double a = Area(v1,v2,v3);
+    long double a3 = Area(v1, p0, v2)/a;
+    long double a1 = Area(v2, p0, v3)/a;
+    long double a2 = Area(v1, p0, v3)/a;  
+    // if (a<0.0001) {printf("a=%Lf, a1=%Lf, a2=%Lf, a3=%Lf\n",a,a1,a2,a3); assert(false);}
 
-    if ((a1<1) && (a2<1) && (a3<1) && (a1 + a2 + a3)<1.000001){
+    if ((a1<1) && (a2<1) && (a3<1) && (a1 + a2 + a3)<1.0001){
         hi.hitPos = p0;
         vec3 temp_n = a1*normalList[normalP[0]] + a2*normalList[normalP[1]] + a3*normalList[normalP[2]];
         hi.hitNorm = (ctheta>0)? temp_n :-temp_n;
-        // hi.hitNorm = (posn)? temp_n :-temp_n;
         hi.m = materialList[midx];
         hi.rayDepth = ray.depth;
         hi.v = -ray.d;

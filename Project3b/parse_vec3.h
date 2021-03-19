@@ -29,7 +29,7 @@ std::string imgName = "raytraced.bmp";
 
 int max_depth = 5;
 
-void parseSceneFile(std::string fileName, Scene* scene, Camera* camera, int& sample_size){
+void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
   FILE *fp;
   long length;
   char line[MAX_LEN]; //assume no line is longer than 1024 characters
@@ -135,9 +135,9 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera, int& sam
     if (!strcmp(command, "max_depth:")){ //camera_fov_ha: 35
       sscanf(line, "max_depth: %d",&max_depth);
     }
-    if (!strcmp(command, "sample_size:")){ //camera_fov_ha: 35
-      sscanf(line, "sample_size: %d",&sample_size);
-    }
+    // if (!strcmp(command, "sample_size:")){ //camera_fov_ha: 35
+    //   sscanf(line, "sample_size: %d",&sample_size);
+    // }
     if (!strcmp(command, "max_vertices:")){ //camera_fov_ha: 35
       sscanf(line, "max_vertices: %d",&max_vertices);
       vertexList.reserve(max_vertices+1);

@@ -38,9 +38,13 @@ using namespace std;
 #include <string>
 #include <typeinfo>
 
-float rand_n1(){
-  return (rand()%100-50)/100.0;
-}
+static void CheckOption(char *option, int argc, int minargc);
+float rand_n1();
+int log2_asm(int x);
+void UpdateImage(Image* image, BoundingBox* BB, int numThreads);
+void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
+void RerenderImage(Image* image, unsigned char* img_data, BoundingBox* BB, int numThreads);
+static void ShowUsage(void);
 
 //Global variables
 Scene* scene = new Scene();
@@ -58,73 +62,6 @@ vec3 positiveMovement;
 vec3 negativeTurn;
 vec3 positiveTurn;
 
-int log2_asm(int x){
-	uint32_t y;
-	asm ("\tbsr %1, %0\n"
-		: "=r"(y)
-		: "r" (x)
-	);
-	return y;
-}
-
-void UpdateImage(Image* image, BoundingBox* BB, int sample_size){
-   printf("samplesize>1\n");
-   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
-  
-   auto t_start = std::chrono::high_resolution_clock::now();
-   #pragma omp parallel for schedule(dynamic, 18)
-  for (int i = 0; i < img_width; i++){
-    for (int j = 0; j < img_height; j++){
-      Ray ray = Ray();
-      ray.p = camera->eye;
-      ray.depth = max_depth;
-      HitInfo hitInfo =HitInfo();
-      Color c_sum = Color(0,0,0);
-      Color c_sum_p = Color(1,1,1);
-      float diff = 1;
-      int k=0;
-      while (((k<sample_size) && (diff > 0.1))){ //(k<3) ||
-         float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
-         float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
-         vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-         ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-         Color c = scene->EvaluateRayTree(ray, BB);
-         c_sum = c_sum + c;
-         diff = c_sum.diff(c_sum_p);
-         c_sum_p = c_sum;
-         k++;    
-      }
-      image->SetPixel(i,j,c_sum * (1.0/k));
-    }
-  }
-  auto t_end = std::chrono::high_resolution_clock::now();
-  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-}
-
-//when sample_size is 1(default)
-void UpdateImage(Image* image, BoundingBox* BB){
-   printf("samplesize=1\n");
-   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
-  
-   auto t_start = std::chrono::high_resolution_clock::now();
-   #pragma omp parallel for schedule(dynamic, 18)
-  for (int i = 0; i < img_width; i++){
-    for (int j = 0; j < img_height; j++){
-      Ray ray = Ray();
-      ray.p = camera->eye;
-      ray.depth = max_depth;
-      HitInfo hitInfo =HitInfo();
-      float u = (img_width/2.0 - img_width*((float)i/img_width));
-      float v = (img_height/2.0 - img_height*((float)j/img_height));
-      vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-      ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-      Color c = scene->EvaluateRayTree(ray, BB);
-       image->SetPixel(i,j,c);
-    }
-  }
-  auto t_end = std::chrono::high_resolution_clock::now();
-  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-}
 
 float vertices[] = {  //The function updateVertices() changes these values to match p1,p2,p3,p4
 //  X     Y     R     G     B     U    V  
@@ -133,16 +70,6 @@ float vertices[] = {  //The function updateVertices() changes these values to ma
   1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right
   1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right 2   
 };
-
-// float vertices[] = {  //The function updateVertices() changes these values to match p1,p2,p3,p4
-// //  X     Y     R     G     B     U    V     
-//   1.0f,  1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,  // top right 2
-//   1.0f, -1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // bottom right 
-//   -1.0f,  1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f,  // top left 4 
-//   -1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,  // bottom left3   
-// };
-
-
 
 /////////////////////////////
 /// ... below is OpenGL specifc code,
@@ -170,36 +97,46 @@ const GLchar* fragmentSource =
    "void main() {"
    "   outColor = texture(tex0, vec2(texcoord.x, 1.0-texcoord.y)).rgb;"
    "}";
-
-void RerenderImage(Image* image, unsigned char* img_data, BoundingBox* BB){
-   // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
-   camera->Update(0.1); 
-   camera->PrintState();
-   UpdateImage(image, BB); //sample_size=1 to speed up rendering
-   img_data = image->ToBytes();
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
-   glGenerateMipmap(GL_TEXTURE_2D);
-}
    
 bool fullscreen = false;
 
 float mouse_dragging = false;
 int main(int argc, char *argv[]){
-
+   int sample_size = 1; //set default sample_size, may be overwritten by command input
+   int numThreads = 8; //default number of threads, may be overwritten by command input
   //Read command line paramaters to get scene file
-   if (argc != 2){
-      std::cout << "Usage: ./a.out scenefile\n";
+   if (argc < 2){
+      // std::cout << "Usage: ./a.out scenefile\n";
+      ShowUsage();
       return(0);
    }
-   std::string secenFileName = argv[1];
-
+   argv += 1, argc -= 1;
+   std::string secenFileName = argv[0];
+   argv += 1, argc -= 1;
+   while (argc>0){
+      if (**argv == '-'){
+         if (!strcmp(*argv, "-samplesize"))
+         {
+            CheckOption(*argv, argc, 2);
+            sample_size = atoi(argv[1]);
+            argv += 2, argc -= 2;
+         }
+         if (!strcmp(*argv, "-numthreads"))
+         {
+            CheckOption(*argv, argc, 2);
+            numThreads = atoi(argv[1]);
+            argv += 2, argc -= 2;
+         }
+      }
+   }
+   printf("sample size = %d, number of threads = %d\n",sample_size,numThreads);
    vertexList.reserve(500);
    normalList.reserve(500);
    materialList.reserve(50);
-   int sample_size = 1; //set default sample_size, may be overwritten by parseSceneFile
+   
    auto t_start = std::chrono::high_resolution_clock::now();
    //Parse Scene File
-   parseSceneFile(secenFileName, scene, camera, sample_size);
+   parseSceneFile(secenFileName, scene, camera);
    auto t_end = std::chrono::high_resolution_clock::now();
    printf("Parsing file took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
@@ -228,8 +165,8 @@ int main(int argc, char *argv[]){
    printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
    Image* image = new Image(img_width,img_height);  
-   if (sample_size>1) {UpdateImage(image, BB,sample_size);} 
-   else {UpdateImage(image, BB);}
+   if (sample_size>1) {UpdateImage(image, BB,sample_size,numThreads);} 
+   else {UpdateImage(image, BB,numThreads);}
 
   //Update file name with time stamp
   char date[50];
@@ -396,7 +333,7 @@ t_end = std::chrono::high_resolution_clock::now();
                *camera = *camera0;
                printf("resetting the scene.\n");
                camera->PrintState();
-               UpdateImage(image, BB);
+               UpdateImage(image, BB,numThreads);
                img_data = image->ToBytes();
                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
                glGenerateMipmap(GL_TEXTURE_2D);
@@ -404,82 +341,47 @@ t_end = std::chrono::high_resolution_clock::now();
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
             {
                key_w_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
                }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) //If "s" is pressed
             {
                key_s_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) //If "a" is pressed
             {
                key_a_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "d" is pressed
             {
                key_d_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_q) //If "o" is pressed
             {
                key_q_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e)
-         //    {
-         //       key_e_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_j)
-         //    {
-         //       key_j_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_k)
-         //    {
-         //       key_k_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l)
-         //    {
-         //       key_l_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_u)
-         //    {
-         //       key_u_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_i)
-         //    {
-         //       key_i_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o)
-         //    {
-         //       key_o_pressed();
-         //       RerenderImage(image, img_data, BB);
-         //    }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
             {
                key_left_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
             {
                key_right_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
             {
                key_up_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
             {
                key_down_pressed();
-               RerenderImage(image, img_data, BB);
+               RerenderImage(image, img_data, BB,numThreads);
             }
          SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
 //          t_end = std::chrono::high_resolution_clock::now();
@@ -515,4 +417,112 @@ t_end = std::chrono::high_resolution_clock::now();
    SDL_GL_DeleteContext(context);
    SDL_Quit();
    return 0;
+}
+
+
+/**
+ * CheckOption
+ **/
+static void CheckOption(char *option, int argc, int minargc){
+	if (argc < minargc){
+		fprintf(stderr, "Too few arguments for %s\n", option);
+		ShowUsage();
+	}
+}
+
+float rand_n1(){
+  return (rand()%100-50)/100.0;
+}
+
+int log2_asm(int x){
+	uint32_t y;
+	asm ("\tbsr %1, %0\n"
+		: "=r"(y)
+		: "r" (x)
+	);
+	return y;
+}
+
+void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
+   // printf("samplesize=%d\n",sample_size);
+   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
+  
+   auto t_start = std::chrono::high_resolution_clock::now();
+   #pragma omp parallel for schedule(dynamic, numThreads)
+  for (int i = 0; i < img_width; i++){
+    for (int j = 0; j < img_height; j++){
+      Ray ray = Ray();
+      ray.p = camera->eye;
+      ray.depth = max_depth;
+      HitInfo hitInfo =HitInfo();
+      Color c_sum = Color(0,0,0);
+      Color c_sum_p = Color(1,1,1);
+      float diff = 1;
+      int k=0;
+      while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
+         float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
+         float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
+         vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
+         ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
+         Color c = scene->EvaluateRayTree(ray, BB);
+         c_sum = c_sum + c;
+         diff = c_sum.diff(c_sum_p);
+         c_sum_p = c_sum;
+         k++;    
+      }
+      image->SetPixel(i,j,c_sum * (1.0/k));
+    }
+  }
+  auto t_end = std::chrono::high_resolution_clock::now();
+  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
+}
+
+//when sample_size is 1(default)
+void UpdateImage(Image* image, BoundingBox* BB, int numThreads){
+   // printf("samplesize=1\n");
+   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
+  
+   auto t_start = std::chrono::high_resolution_clock::now();
+   #pragma omp parallel for schedule(dynamic, numThreads)
+  for (int i = 0; i < img_width; i++){
+    for (int j = 0; j < img_height; j++){
+      Ray ray = Ray();
+      ray.p = camera->eye;
+      ray.depth = max_depth;
+      HitInfo hitInfo =HitInfo();
+      float u = (img_width/2.0 - img_width*((float)i/img_width));
+      float v = (img_height/2.0 - img_height*((float)j/img_height));
+      vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
+      ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
+      Color c = scene->EvaluateRayTree(ray, BB);
+       image->SetPixel(i,j,c);
+    }
+  }
+  auto t_end = std::chrono::high_resolution_clock::now();
+  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
+}
+
+void RerenderImage(Image* image, unsigned char* img_data, BoundingBox* BB, int numThreads){
+   // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
+   camera->Update(0.1); 
+   camera->PrintState();
+   UpdateImage(image, BB,numThreads); //sample_size=1 to speed up rendering
+   img_data = image->ToBytes();
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+   glGenerateMipmap(GL_TEXTURE_2D);
+}
+
+/**
+ * ShowUsage
+ **/
+static char options[] =
+"-samplesize <n>\n"
+"-numthreads <n>\n"
+;
+
+static void ShowUsage(void)
+{
+	fprintf(stderr, "Usage: ./ray scenefile\n");
+	fprintf(stderr, "%s", options);
+	exit(EXIT_FAILURE);
 }
