@@ -2,7 +2,7 @@
 #define SCENE_H
 
 #include "objects.h"
-#include <list>
+#include <vector>
 #include <memory>
 #include "bvh.h"
 
@@ -12,8 +12,8 @@ class Scene{
     Color background;
     int numObj;
     int numLights;
-    std::list<Obj*> objects;
-    std::list<Light*> lights;
+    std::vector<Obj*> objects;
+    std::vector<Light*> lights;
 
 public:
     Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0){
@@ -38,7 +38,7 @@ public:
     Color GetBackground();
     void SetBackground(Color);
     void SetAmbientlight(Color);    
-    std::list<Obj*> GetObjects() {return objects;}
+    std::vector<Obj*> GetObjects() {return objects;}
     //Given a point and a direction, check for the closest hit, return information
     bool Hit(const Ray& ray, HitInfo&);
 

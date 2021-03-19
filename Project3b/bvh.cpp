@@ -88,18 +88,21 @@ bool comp_z(Obj* x, Obj* y){
     // return (x->GetBoundMin().z < y->GetBoundMin().z);
 }
 
-float EvalBBSplit(std::list<Obj*> objList, int numObj, int axis, std::list<Obj*> &objsublist1, std::list<Obj*> &objsublist2,
+float EvalBBSplit(std::vector<Obj*> objList, int numObj, int axis, std::vector<Obj*> &objsublist1, std::vector<Obj*> &objsublist2,
     vec3 &maxVleft, vec3 &minVleft, vec3 &maxVright, vec3 &minVright){ //axis = 0 - x, 1-y,2-z
     switch (axis)
     {
     case 0:
-        objList.sort(comp_x);
+        std::sort(objList.begin(),objList.end(),comp_x);
+        // objList.sort(comp_x);
         break;
     case 1:
-        objList.sort(comp_y);
+        std::sort(objList.begin(),objList.end(),comp_y);
+        // objList.sort(comp_y);
         break;    
     default:
-        objList.sort(comp_z);
+        std::sort(objList.begin(),objList.end(),comp_z);
+        // objList.sort(comp_z);
         break;
     }
     // std::list<Obj*> objsublist1, objsublist2;
@@ -138,17 +141,14 @@ float EvalBBSplit(std::list<Obj*> objList, int numObj, int axis, std::list<Obj*>
     return (minVright-minVleft).lengthsq()+(maxVright-maxVleft).lengthsq();
 }
 
-BoundingBox* BuildBVHTree(std::list<Obj*> objList, vec3 minV, vec3 maxV, int depth){
+BoundingBox* BuildBVHTree(std::vector<Obj*> objList, vec3 minV, vec3 maxV, int depth){
     //Get number of objects
-    // printf("inside tree building function\n");
     int numObj = objList.size();    
-    // printf("numObj=%d, depth=%d\n",numObj,depth);
     if (numObj==1 || depth<=0){
-        // printf("reached leaf.\n");//assert(false);
         BoundingBox* leaf = new BoundingBox(minV, maxV,0, objList);
         return leaf;
     }
-    std::list<Obj*> objsublist1, objsublist2;
+    std::vector<Obj*> objsublist1, objsublist2;
     vec3 minVleft = vec3(MAX_T,MAX_T,MAX_T), minVright = vec3(MAX_T,MAX_T,MAX_T);
     vec3 maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T), maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     float dx = EvalBBSplit(objList,numObj,0, objsublist1, objsublist2,maxVleft, minVleft, maxVright, minVright);
@@ -157,7 +157,6 @@ BoundingBox* BuildBVHTree(std::list<Obj*> objList, vec3 minV, vec3 maxV, int dep
     objsublist1.clear();objsublist2.clear();
     float dz = EvalBBSplit(objList,numObj,2, objsublist1, objsublist2,maxVleft, minVleft, maxVright, minVright);
     objsublist1.clear();objsublist2.clear();
-    // printf("dx=%f,dy=%f,dz=%f\n",dx,dy,dz);
     if (dx<0.000000001 && dy<0.000000001 && dz<0.000000001){
         // printf("no good split.\n");
         BoundingBox* leaf = new BoundingBox(minV, maxV,0, objList);
@@ -211,10 +210,8 @@ bool SearchBVHTree(Ray ray, BoundingBox* BB, HitInfo& hi){
 };
 
 void DeallocateBVHTree(BoundingBox* BB){
-
-    if (BB=NULL) return;
+    if (BB==NULL) return;
     DeallocateBVHTree(BB->GetLeftChild());
     DeallocateBVHTree(BB->GetRightChild());
     delete BB;
-    free (BB);
 };

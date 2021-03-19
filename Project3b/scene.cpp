@@ -44,8 +44,8 @@ bool Scene::Hit(const Ray& ray, HitInfo& hi){
     HitInfo hi_temp=HitInfo();    
     bool hit = false;
     //for (std::list<int>::iterator it=mylist.begin(); it != mylist.end(); ++it)
-    for (std::list<Obj*>::iterator it = objects.begin(); it != objects.end(); ++it){
-        bool curHit = (*it)->Hit(ray,hi_temp);
+    for (int i=0; i<numObj; i++){
+        bool curHit = objects[i]->Hit(ray,hi_temp);
         if (curHit && (hi_temp.t < hi.t)){
             // printf("hit\n");assert(false);
             hi = hi_temp;
@@ -58,17 +58,18 @@ bool Scene::Hit(const Ray& ray, HitInfo& hi){
 
 Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     Color c_out = Color();
-    for (std::list<Light*>::iterator it =lights.begin(); it != lights.end(); ++it){
-        // Light* l = lights[i];       
-        Ray ray_shadow = Ray(hi.hitPos, (*it)->CalDir(hi.hitPos), 1);
+    for (int i=0; i<numLights; i++){
+        Light* l = lights[i];       
+        Ray ray_shadow = Ray(hi.hitPos, l->CalDir(hi.hitPos), 1);
         HitInfo shadow_hitInfo;
-        bool shadow_hit = Hit(ray_shadow,shadow_hitInfo);
+        // bool shadow_hit = Hit(ray_shadow,shadow_hitInfo);
+        bool shadow_hit = SearchBVHTree(ray_shadow, BB, shadow_hitInfo);
         //check if the ray is blocked from the light source
-        if ((*it)->type == DIRECTION_LIGHT){
+        if (l->type == DIRECTION_LIGHT){
             if (shadow_hit) continue;
-        } else if (shadow_hit && shadow_hitInfo.t < Distance((*it)->p, hi.hitPos )) 
+        } else if (shadow_hit && shadow_hitInfo.t < Distance(l->p, hi.hitPos )) 
             continue;
-        c_out = c_out + (*it)->Shading(hi);        
+        c_out = c_out + l->Shading(hi);        
     }
     if (hi.rayDepth>0){
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal

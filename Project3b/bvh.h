@@ -3,7 +3,8 @@
 
 #include "vec3.h"
 #include "objects.h"
-#include <list>
+#include <vector>
+#include <algorithm>
 
 class BoundingSphere {
     vec3 pos;
@@ -26,12 +27,12 @@ class BoundingBox {
     int depth;
     BoundingBox* leftChild;
     BoundingBox* rightChild;
-    std::list<Obj*> objlist;   
+    std::vector<Obj*> objlist;   
 public:
     //Constructor
     BoundingBox() : minPos(vec3()), maxPos(vec3()), depth(0), leftChild(NULL), rightChild(NULL) {}
     BoundingBox(vec3 pmin_, vec3 pmax_, int d_) : minPos(pmin_), maxPos(pmax_), depth(d_), leftChild(NULL), rightChild(NULL) {}
-    BoundingBox(vec3 pmin_, vec3 pmax_, int d_, std::list<Obj*> objlist_) : minPos(pmin_), maxPos(pmax_), depth(d_), leftChild(NULL), rightChild(NULL), objlist (objlist_) {}
+    BoundingBox(vec3 pmin_, vec3 pmax_, int d_, std::vector<Obj*> objlist_) : minPos(pmin_), maxPos(pmax_), depth(d_), leftChild(NULL), rightChild(NULL), objlist (objlist_) {}
     ~BoundingBox() {}
     //Check whether a ray intersect the sphere
     bool Hit(Ray, float&);
@@ -52,7 +53,7 @@ public:
 // };
 
 //return root node
-BoundingBox* BuildBVHTree(std::list<Obj*>, vec3, vec3, int);
+BoundingBox* BuildBVHTree(std::vector<Obj*>, vec3, vec3, int);
 
 bool SearchBVHTree(Ray, BoundingBox*, HitInfo&);
 

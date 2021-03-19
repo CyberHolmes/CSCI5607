@@ -45,7 +45,7 @@ float rand_n1(){
 //Global variables
 Scene* scene = new Scene();
 Camera* camera = new Camera();
-int sample_size = 1;
+Camera* camera0 = new Camera(*camera); //store original data
 
 int img_width = 640, img_height = 480;
 int max_vertices, max_normals;
@@ -67,12 +67,12 @@ int log2_asm(int x){
 	return y;
 }
 
-void UpdateImage(Image* image, BoundingBox* BB){
-
+void UpdateImage(Image* image, BoundingBox* BB, int sample_size){
+   printf("samplesize>1\n");
    float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
   
    auto t_start = std::chrono::high_resolution_clock::now();
-   #pragma omp parallel for schedule(dynamic, 12)
+   #pragma omp parallel for schedule(dynamic, 18)
   for (int i = 0; i < img_width; i++){
     for (int j = 0; j < img_height; j++){
       Ray ray = Ray();
@@ -83,7 +83,7 @@ void UpdateImage(Image* image, BoundingBox* BB){
       Color c_sum_p = Color(1,1,1);
       float diff = 1;
       int k=0;
-      while ((k<3) || ((k<sample_size) && (diff > 0.1))){
+      while (((k<sample_size) && (diff > 0.1))){ //(k<3) ||
          float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
          float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
          vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
@@ -95,6 +95,31 @@ void UpdateImage(Image* image, BoundingBox* BB){
          k++;    
       }
       image->SetPixel(i,j,c_sum * (1.0/k));
+    }
+  }
+  auto t_end = std::chrono::high_resolution_clock::now();
+  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
+}
+
+//when sample_size is 1(default)
+void UpdateImage(Image* image, BoundingBox* BB){
+   printf("samplesize=1\n");
+   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
+  
+   auto t_start = std::chrono::high_resolution_clock::now();
+   #pragma omp parallel for schedule(dynamic, 18)
+  for (int i = 0; i < img_width; i++){
+    for (int j = 0; j < img_height; j++){
+      Ray ray = Ray();
+      ray.p = camera->eye;
+      ray.depth = max_depth;
+      HitInfo hitInfo =HitInfo();
+      float u = (img_width/2.0 - img_width*((float)i/img_width));
+      float v = (img_height/2.0 - img_height*((float)j/img_height));
+      vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
+      ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
+      Color c = scene->EvaluateRayTree(ray, BB);
+       image->SetPixel(i,j,c);
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
@@ -147,10 +172,10 @@ const GLchar* fragmentSource =
    "}";
 
 void RerenderImage(Image* image, unsigned char* img_data, BoundingBox* BB){
-   sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
+   // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
    camera->Update(0.1); 
    camera->PrintState();
-   UpdateImage(image, BB);
+   UpdateImage(image, BB); //sample_size=1 to speed up rendering
    img_data = image->ToBytes();
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
    glGenerateMipmap(GL_TEXTURE_2D);
@@ -161,24 +186,25 @@ bool fullscreen = false;
 float mouse_dragging = false;
 int main(int argc, char *argv[]){
 
-   //Read command line paramaters to get scene file
-  if (argc != 2){
-     std::cout << "Usage: ./a.out scenefile\n";
-     return(0);
-  }
-  std::string secenFileName = argv[1];
+  //Read command line paramaters to get scene file
+   if (argc != 2){
+      std::cout << "Usage: ./a.out scenefile\n";
+      return(0);
+   }
+   std::string secenFileName = argv[1];
 
-  vertexList.reserve(500);
+   vertexList.reserve(500);
    normalList.reserve(500);
    materialList.reserve(50);
-auto t_start = std::chrono::high_resolution_clock::now();
-  //Parse Scene File
-  parseSceneFile(secenFileName, scene, camera, sample_size);
-auto t_end = std::chrono::high_resolution_clock::now();
-  printf("Parsing file took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
+   int sample_size = 1; //set default sample_size, may be overwritten by parseSceneFile
+   auto t_start = std::chrono::high_resolution_clock::now();
+   //Parse Scene File
+   parseSceneFile(secenFileName, scene, camera, sample_size);
+   auto t_end = std::chrono::high_resolution_clock::now();
+   printf("Parsing file took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
-t_start = std::chrono::high_resolution_clock::now();
-   std::list<Obj*> objList = scene->GetObjects();
+   t_start = std::chrono::high_resolution_clock::now();
+   std::vector<Obj*> objList = scene->GetObjects();
    vec3 minV = vec3(MAX_T,MAX_T,MAX_T), maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
    // printf("number objects = %ld\n",objList.size());
    for ( auto const& obj : objList){
@@ -198,12 +224,12 @@ t_start = std::chrono::high_resolution_clock::now();
    // printf("objList.size()=%d\n",objList.size());
    // printf("log2_asm(objList.size())=%d\n",log2_asm(objList.size()));
    BoundingBox* BB = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
-t_end = std::chrono::high_resolution_clock::now();
-  printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-//   assert(false);
+   t_end = std::chrono::high_resolution_clock::now();
+   printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
-  Image* image = new Image(img_width,img_height);  
-  UpdateImage(image, BB);
+   Image* image = new Image(img_width,img_height);  
+   if (sample_size>1) {UpdateImage(image, BB,sample_size);} 
+   else {UpdateImage(image, BB);}
 
   //Update file name with time stamp
   char date[50];
@@ -364,7 +390,17 @@ t_end = std::chrono::high_resolution_clock::now();
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
             image->Write(outFileName.c_str());
-         }            
+         }  
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) //If "w" is pressed
+            {
+               *camera = *camera0;
+               printf("resetting the scene.\n");
+               camera->PrintState();
+               UpdateImage(image, BB);
+               img_data = image->ToBytes();
+               glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, img_data);
+               glGenerateMipmap(GL_TEXTURE_2D);
+               }             
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
             {
                key_w_pressed();
@@ -390,61 +426,61 @@ t_end = std::chrono::high_resolution_clock::now();
                key_q_pressed();
                RerenderImage(image, img_data, BB);
             }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e)
-            {
-               key_e_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_j)
-            {
-               key_j_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_k)
-            {
-               key_k_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l)
-            {
-               key_l_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_u)
-            {
-               key_u_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_i)
-            {
-               key_i_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o)
-            {
-               key_o_pressed();
-               RerenderImage(image, img_data, BB);
-            }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e)
          //    {
-         //       key_left_pressed();
-         //       RerenderImage(image, img_data);
+         //       key_e_pressed();
+         //       RerenderImage(image, img_data, BB);
          //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_j)
          //    {
-         //       key_right_pressed();
-         //       RerenderImage(image, img_data);
+         //       key_j_pressed();
+         //       RerenderImage(image, img_data, BB);
          //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_k)
          //    {
-         //       key_up_pressed();
-         //       RerenderImage(image, img_data);
+         //       key_k_pressed();
+         //       RerenderImage(image, img_data, BB);
          //    }
-         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l)
          //    {
-         //       key_down_pressed();
-         //       RerenderImage(image, img_data);
+         //       key_l_pressed();
+         //       RerenderImage(image, img_data, BB);
          //    }
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_u)
+         //    {
+         //       key_u_pressed();
+         //       RerenderImage(image, img_data, BB);
+         //    }
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_i)
+         //    {
+         //       key_i_pressed();
+         //       RerenderImage(image, img_data, BB);
+         //    }
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o)
+         //    {
+         //       key_o_pressed();
+         //       RerenderImage(image, img_data, BB);
+         //    }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
+            {
+               key_left_pressed();
+               RerenderImage(image, img_data, BB);
+            }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
+            {
+               key_right_pressed();
+               RerenderImage(image, img_data, BB);
+            }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
+            {
+               key_up_pressed();
+               RerenderImage(image, img_data, BB);
+            }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
+            {
+               key_down_pressed();
+               RerenderImage(image, img_data, BB);
+            }
          SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
 //          t_end = std::chrono::high_resolution_clock::now();
 //   printf("OpenGL Display took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
@@ -461,23 +497,22 @@ t_end = std::chrono::high_resolution_clock::now();
 
       SDL_GL_SwapWindow(window); //Double buffering
    }
-
+   DeallocateBVHTree(BB);
+   BB = NULL;
    delete [] img_data;
    delete image;
    delete camera;
+   delete camera0;
    delete scene;
-   DeallocateBVHTree(BB);
+   
    glDeleteProgram(shaderProgram);
    glDeleteShader(fragmentShader);
    glDeleteShader(vertexShader);
-
    glDeleteBuffers(1, &vbo);
-
    glDeleteVertexArrays(1, &vao);
    
    //Clean Up
    SDL_GL_DeleteContext(context);
    SDL_Quit();
-   // delete scene;
    return 0;
 }

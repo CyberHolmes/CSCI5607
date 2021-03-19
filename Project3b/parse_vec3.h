@@ -24,6 +24,7 @@
 extern int img_width, img_height, max_vertices, max_normals;
 extern std::vector<vec3> vertexList, normalList;
 extern std::vector<Material> materialList;
+extern Camera* camera0;
 std::string imgName = "raytraced.bmp";
 
 int max_depth = 5;
@@ -172,6 +173,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera, int& sam
   camera->forward = camera->forward.normalized();
   camera->up = (camera->up - dot(camera->up,camera->forward)*camera->forward).normalized();
   camera->right = cross(camera->up,camera->forward);
+  *camera0 = *camera;
   // float temp = camera->forward.length();
   // camera->theta = (fabs(temp)<MIN_T)? 0:acos(camera->forward.y/temp)-PI/2;
   // camera->phi = (fabs(camera->forward.x)<MIN_T)? 0: atan2(-camera->forward.z,camera->forward.x)-PI/2;

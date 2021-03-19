@@ -4,9 +4,6 @@
 #include "vec3.h"
 #define PI 3.14159265
 
-
-
-
 // probably don't need / want to change any of the below variables
 extern vec3 negativeMovement;
 extern vec3 positiveMovement;
@@ -20,30 +17,23 @@ struct Camera
     vec3 up;
     vec3 right;
     float fov_h;
-    // float theta; // rotation around Y axis. Starts with forward direction as ( 0, 0, -1 )
-    // float phi; // rotation around X axis. Starts with up direction as ( 0, 1, 0 )
 
     Camera() : eye(0,0,0), forward(0,0,-1),up(0,1,0),right(-1,0,0),fov_h(45){}
+    Camera(Camera& c) : eye(c.eye), forward(c.forward), up(c.up), right(c.right),fov_h(c.fov_h){}
+    void operator= (Camera&c){eye = c.eye; forward = c.forward; up = c.up; right = c.right, fov_h = c.fov_h;}
     void Update(float dt){   
-        float moveSpeed=1;
+        float moveSpeed=2.5;
         float turnSpeed=0.5;     
-        // theta = turnSpeed * (negativeTurn.x + positiveTurn.x)*dt;
+        float theta = turnSpeed * (negativeTurn.x + positiveTurn.x)*dt; // rotation around Y axis. Starts with forward direction as ( 0, 0, -1 )
         // cap the rotation about the X axis to be less than 90 degrees to avoid gimble lock
-        // float maxAngleInRadians = 85 * PI / 180;
-        // phi = fmin( maxAngleInRadians, fmax( -maxAngleInRadians, phi + turnSpeed * ( negativeTurn.y+ positiveTurn.y ) * dt ) );
+        float maxAngleInRadians = 85 * PI / 180;
+        // rotation around X axis. Starts with up direction as ( 0, 1, 0 )
+        float phi = fmin( maxAngleInRadians, fmax( -maxAngleInRadians, turnSpeed * ( negativeTurn.y+ positiveTurn.y ) * dt ) );
+        vec3 cforward = forward; //current forward postion
+        forward.x = cos(theta)*cforward.x - sin(theta)*sin(phi)*cforward.y -sin(theta)*cos(phi)*cforward.z;
+        forward.y = cos(phi)*cforward.y - sin(phi)*cforward.z;
+        forward.z = sin(theta)*cforward.x + cos(theta)*sin(phi)*cforward.y + cos(theta)*cos(phi)*cforward.z;
         
-        // // re-orienting the angles to match the wikipedia formulas: https://en.wikipedia.org/wiki/Spherical_coordinate_system
-        // // except that their theta and phi are named opposite
-        // float t = theta;// + PI / 2;
-        // float p = phi;// + PI / 2;
-        // forward = forward + vec3( sin( p ) * cos( t ),   cos( p ),   -sin( p ) * sin ( t ) );
-        // up = up +vec3( sin( phi ) * cos( t ), cos( phi ), -sin( t ) * sin( phi ) );        
-        // right = right + vec3( -cos( theta ), 0, sin( theta ) );
-        // forward = forward + vec3(forward.x*sin( p ) * cos( t ), forward.y*cos(p), -forward.z*sin( p ) * sin ( t ));
-
-        vec3 turnvel = vec3(positiveTurn.x+negativeTurn.x,positiveTurn.y+negativeTurn.y,positiveTurn.z+negativeTurn.z);
-        forward = forward +turnSpeed*dt*turnvel;
-
         forward = forward.normalized();
         up = (up - dot(up,forward)*forward).normalized();
         right = cross(up,forward);
@@ -83,36 +73,17 @@ inline void key_q_pressed(){
 inline void key_e_pressed(){
     negativeMovement.y = -1;
 }
-inline void key_j_pressed(){
+inline void key_left_pressed(){
+    negativeTurn.x = 1;
+}
+inline void key_right_pressed(){
     negativeTurn.x = -1;
 }
-inline void key_l_pressed(){
-    positiveTurn.x = 1;
-}
-inline void key_u_pressed(){
-    negativeTurn.z = -1;
-}
-inline void key_o_pressed(){
-    positiveTurn.z = 1;
-}
-inline void key_k_pressed(){
-    negativeTurn.y = -1;
-}
-inline void key_i_pressed(){
+inline void key_up_pressed(){
     positiveTurn.y = 1;
 }
-
-// inline void key_left_pressed(){
-//     negativeTurn.x = 1;
-// }
-// inline void key_right_pressed(){
-//     negativeTurn.x = -1;
-// }
-// inline void key_up_pressed(){
-//     positiveTurn.y = 1;
-// }
-// inline void key_down_pressed(){
-//     positiveTurn.y = -1;
-// }
+inline void key_down_pressed(){
+    positiveTurn.y = -1;
+}
 
 #endif
