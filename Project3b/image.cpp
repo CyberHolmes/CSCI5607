@@ -3,6 +3,7 @@
 
 Image::Image(int w, int h) : width(w), height(h) {
     pixels = new Color[width*height];
+    rawPixels = new uint8_t[width*height*4];
 }
 
     //Copy constructor - Called on: Image img1 = img2; //Making new image
@@ -30,6 +31,7 @@ Image::Image(const char* fname) {
     }
 
     pixels = new Color[width*height];
+    rawPixels = new uint8_t[width*height*4];
 
     for (int i = 0; i < width; i++){
         for (int j = 0; j < height; j++){
@@ -49,8 +51,8 @@ Color& Image::GetPixel(int i, int j){
     return pixels[i+j*width];
 }
 
-uint8_t* Image::ToBytes(){
-    uint8_t* rawPixels = new uint8_t[width*height*4];
+void Image::UpdateRawPixels(){
+    // uint8_t* rawPixels = new uint8_t[width*height*4];
     for (int i = 0; i < width; i++){
         for (int j = 0; j < height; j++){
         Color col = GetPixel(i,j);
@@ -60,31 +62,31 @@ uint8_t* Image::ToBytes(){
         rawPixels[4*(i+j*width)+3] = 255; //alpha
         }
     }
-    return rawPixels;
+    // return rawPixels;
 }
 
 void Image::Write(const char* fname){
 
-    uint8_t* rawBytes = ToBytes();
+    UpdateRawPixels();
 
     int lastc = strlen(fname);
 
     switch (fname[lastc-1]){
         case 'g': //jpeg (or jpg) or png
         if (fname[lastc-2] == 'p' || fname[lastc-2] == 'e') //jpeg or jpg
-            stbi_write_jpg(fname, width, height, 4, rawBytes, 95);  //95% jpeg quality
+            stbi_write_jpg(fname, width, height, 4, rawPixels, 95);  //95% jpeg quality
         else //png
-            stbi_write_png(fname, width, height, 4, rawBytes, width*4);
+            stbi_write_png(fname, width, height, 4, rawPixels, width*4);
         break;
         case 'a': //tga (targa)
-        stbi_write_tga(fname, width, height, 4, rawBytes);
+        stbi_write_tga(fname, width, height, 4, rawPixels);
         break;
         case 'p': //bmp
         default:
-        stbi_write_bmp(fname, width, height, 4, rawBytes);
+        stbi_write_bmp(fname, width, height, 4, rawPixels);
     }
 
-    delete[] rawBytes;
+    // delete[] rawBytes;
 }
 
 // void Image::Render(Scene& scene, Camera& camera, int max_d){
@@ -125,4 +127,4 @@ void Image::Write(const char* fname){
     // }
 // };
 
-Image::~Image(){delete[] pixels;}
+Image::~Image(){delete[] pixels; delete[] rawPixels;}

@@ -38,24 +38,11 @@ bool BoundingBox::Hit(Ray ray, float& t){
     float t_min_x = (t_left_x<t_right_x)?t_left_x:t_right_x;
     float t_min_y = (t_left_y<t_right_y)?t_left_y:t_right_y;
     float t_min_z = (t_left_z<t_right_z)?t_left_z:t_right_z;
-    float t_min = mymax(t_min_x,t_min_y,t_min_z);
-    
-
+    float t_min = mymax(t_min_x,t_min_y,t_min_z);  
 
     if (t_max < MIN_T) return false;
     if (t_min > t_max) return false;
     if (t_min > MAX_T) return false;
-    // if (t_min < 0) return false;
-    // printf("t_left_x=%f,t_right_x=%f\n",t_left_x,t_right_x);
-    // printf("t_max_x=%f, t_max_y=%f, t_max_z=%f",t_max_x,t_max_y,t_max_z);
-    // printf("t_max=%f\n",t_max);
-    // printf("t_min_x=%f, t_min_y=%f, t_min_z=%f",t_min_x,t_min_y,t_min_z);
-    // printf("t_min=%f\n",t_min);
-    // printf("minPos=%f,%f,%f\n", minPos.x,minPos.y,minPos.z);
-    // printf("maxPos=%f,%f,%f\n", maxPos.x,maxPos.y,maxPos.z);
-    // printf("t_max=%f, t_min=%f\n",t_max,t_min);
-    // assert(false);
-
     t = (t_min<0)?t_max:t_min;
     return t_min<=t_max;
 }
@@ -94,24 +81,17 @@ float EvalBBSplit(std::vector<Obj*> objList, int numObj, int axis, std::vector<O
     {
     case 0:
         std::sort(objList.begin(),objList.end(),comp_x);
-        // objList.sort(comp_x);
         break;
     case 1:
         std::sort(objList.begin(),objList.end(),comp_y);
-        // objList.sort(comp_y);
         break;    
     default:
         std::sort(objList.begin(),objList.end(),comp_z);
-        // objList.sort(comp_z);
         break;
     }
-    // std::list<Obj*> objsublist1, objsublist2;
     int numObj1 = numObj/2, numObj2 = numObj - numObj1;
-    // printf("inside split f: axis=%d, numObj=%d,numObj1=%d,numObj2=%d\n",axis,numObj,numObj1,numObj2);
     objsublist1.get_allocator().allocate(numObj1);
     objsublist2.get_allocator().allocate(numObj2);
-    // vec3 minVleft = vec3(MAX_T,MAX_T,MAX_T), minVright = vec3(MAX_T,MAX_T,MAX_T);
-    // vec3 maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T), maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     int i = 0;
     for ( auto const& obj : objList){
         if (i<numObj1) {
@@ -153,12 +133,17 @@ BoundingBox* BuildBVHTree(std::vector<Obj*> objList, vec3 minV, vec3 maxV, int d
     vec3 maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T), maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     float dx = EvalBBSplit(objList,numObj,0, objsublist1, objsublist2,maxVleft, minVleft, maxVright, minVright);
     objsublist1.clear();objsublist2.clear();
+    minVleft = vec3(MAX_T,MAX_T,MAX_T); minVright = vec3(MAX_T,MAX_T,MAX_T);
+    maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T); maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     float dy = EvalBBSplit(objList,numObj,1, objsublist1, objsublist2,maxVleft, minVleft, maxVright, minVright);
     objsublist1.clear();objsublist2.clear();
+    minVleft = vec3(MAX_T,MAX_T,MAX_T); minVright = vec3(MAX_T,MAX_T,MAX_T);
+    maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T); maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     float dz = EvalBBSplit(objList,numObj,2, objsublist1, objsublist2,maxVleft, minVleft, maxVright, minVright);
     objsublist1.clear();objsublist2.clear();
+    minVleft = vec3(MAX_T,MAX_T,MAX_T); minVright = vec3(MAX_T,MAX_T,MAX_T);
+    maxVleft = vec3(-MAX_T,-MAX_T,-MAX_T); maxVright = vec3(-MAX_T,-MAX_T,-MAX_T);
     if (dx<0.000000001 && dy<0.000000001 && dz<0.000000001){
-        // printf("no good split.\n");
         BoundingBox* leaf = new BoundingBox(minV, maxV,0, objList);
         return leaf;
     }
@@ -168,8 +153,6 @@ BoundingBox* BuildBVHTree(std::vector<Obj*> objList, vec3 minV, vec3 maxV, int d
     BoundingBox* curRoot = new BoundingBox(minV,maxV, depth);
     BoundingBox* LeftNode = BuildBVHTree(objsublist1,minVleft, maxVleft, depth-1);
     BoundingBox* RightNode = BuildBVHTree(objsublist2,minVright, maxVright, depth-1);
-    // printf("depth=%d\n",depth);
-    // if (depth<10)assert(false);
     curRoot->SetLeftChild(LeftNode);
     curRoot->SetRightChild(RightNode);
     return curRoot;
@@ -182,30 +165,20 @@ bool SearchBVHTree(Ray ray, BoundingBox* BB, HitInfo& hi){
     if (curhit){
         bool curhitleft=false, curhitright=false;
         HitInfo hi_left = HitInfo(), hi_right = HitInfo();
-        // printf("in root. hi.t=%f\n",hi.t);
-        if (BB->GetLeftChild() != NULL){
-            
+        if (BB->GetLeftChild() != NULL){            
             curhitleft = SearchBVHTree(ray,BB->GetLeftChild(),hi_left);
-            // if (curhitleft) printf("hit left child, hi_left.t=%f\n",hi_left.t);
         }
         if (BB->GetRightChild() != NULL){
-            // printf("check right child\n");
             curhitright = SearchBVHTree(ray,BB->GetRightChild(),hi_right);
-            // if (curhitleft) printf("hit right child, hi_right.t=%f\n",hi_right.t);
         }
         if (curhitleft || curhitright) {
             hi = (hi_left.t < hi_right.t)? hi_left : hi_right;
             hit = hi.t<(MAX_T-1);
-            // if (hit) printf("hi.t=%f\n",hi.t);
         }        
         if (BB->GetLeftChild() == NULL && BB->GetRightChild() == NULL){
-            // printf("in leaf\n");
             hit = BB->HitWInfo(ray,hi);
-            // if (hit) printf("in leaf. hi.t=%f\n",hi.t);
         }
-        // printf("hi_left.t=%f, hi_right.t=%f, hi.t=%f\n",hi_left.t,hi_right.t, hi.t);
     }
-    // std::cout<<(hi.t<MAX_T)<<std::endl;assert(false);
     return hit;
 };
 

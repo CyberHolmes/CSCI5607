@@ -16,8 +16,9 @@ class Image{
 private:
     int width;
     int height;
-    Color* pixels;
+    Color* pixels;    
 public:
+    uint8_t* rawPixels;
     //Construct an empty image with width and height
     Image(int, int);
     //copy constructor
@@ -31,7 +32,7 @@ public:
     //Get pixel color
     Color& GetPixel(int, int);
     //Convert pixel data to bytes
-    uint8_t* ToBytes();
+    void UpdateRawPixels();
     //Output image to a file
     void Write(const char*);
     //Render image

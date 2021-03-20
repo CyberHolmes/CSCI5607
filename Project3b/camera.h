@@ -22,8 +22,8 @@ struct Camera
     Camera(Camera& c) : eye(c.eye), forward(c.forward), up(c.up), right(c.right),fov_h(c.fov_h){}
     void operator= (Camera&c){eye = c.eye; forward = c.forward; up = c.up; right = c.right, fov_h = c.fov_h;}
     void Update(float dt){   
-        float moveSpeed=2.5;
-        float turnSpeed=0.5;     
+        float moveSpeed=5;//2.5;
+        float turnSpeed=1;//0.5;     
         float theta = turnSpeed * (negativeTurn.x + positiveTurn.x)*dt; // rotation around Y axis. Starts with forward direction as ( 0, 0, -1 )
         // cap the rotation about the X axis to be less than 90 degrees to avoid gimble lock
         float maxAngleInRadians = 85 * PI / 180;
