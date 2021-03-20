@@ -5,10 +5,12 @@
 #define PI 3.14159265
 
 // probably don't need / want to change any of the below variables
-extern vec3 negativeMovement;
-extern vec3 positiveMovement;
-extern vec3 negativeTurn;
-extern vec3 positiveTurn;
+vec3 negativeMovement;
+vec3 positiveMovement;
+vec3 negativeTurn;
+vec3 positiveTurn;
+float moveSpeed=5;//2.5;
+float turnSpeed=1;//0.5; 
 
 struct Camera
 {
@@ -21,9 +23,7 @@ struct Camera
     Camera() : eye(0,0,0), forward(0,0,-1),up(0,1,0),right(-1,0,0),fov_h(45){}
     Camera(Camera& c) : eye(c.eye), forward(c.forward), up(c.up), right(c.right),fov_h(c.fov_h){}
     void operator= (Camera&c){eye = c.eye; forward = c.forward; up = c.up; right = c.right, fov_h = c.fov_h;}
-    void Update(float dt){   
-        float moveSpeed=5;//2.5;
-        float turnSpeed=1;//0.5;     
+    void Update(float dt){               
         float theta = turnSpeed * (negativeTurn.x + positiveTurn.x)*dt; // rotation around Y axis. Starts with forward direction as ( 0, 0, -1 )
         // cap the rotation about the X axis to be less than 90 degrees to avoid gimble lock
         float maxAngleInRadians = 85 * PI / 180;

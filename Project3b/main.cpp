@@ -59,10 +59,7 @@ std::vector<vec3> vertexList;
 std::vector<vec3> normalList;
 std::vector<Material> materialList;
 
-vec3 negativeMovement;
-vec3 positiveMovement;
-vec3 negativeTurn;
-vec3 positiveTurn;
+
 
 
 float vertices[] = {  //The function updateVertices() changes these values to match p1,p2,p3,p4
@@ -600,9 +597,40 @@ void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, Bo
          }
          OpenGLRender(window,image);                
       }
-      
+      for (int i1=i;i1<img_width;i1++){
+         for (int j2=0;j2<step;j2++){
+            j=j1*step+j2;
+            Ray ray = Ray();
+            ray.p = camera->eye;
+            ray.depth = max_depth;
+            HitInfo hitInfo =HitInfo();
+            Color c_sum = Color(0,0,0);
+            Color c_sum_p = Color(1,1,1);
+            float diff = 1;
+            int k=0;
+            while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
+               float u = (img_width/2.0 - img_width*((i1+(k>0)*rand_n1())/img_width));
+               float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
+               vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
+               ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
+               Color c = scene->EvaluateRayTree(ray, BB);         
+               c_sum = c_sum + c;
+               diff = c_sum.diff(c_sum_p);
+               c_sum_p = c_sum;
+               k++;    
+            }
+            c_sum = c_sum * (1.0/k);
+            image->SetPixel(i1,j,c_sum);
+            image->rawPixels[4*(i1+j*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
+            image->rawPixels[4*(i1+j*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
+            image->rawPixels[4*(i1+j*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
+            image->rawPixels[4*(i1+j*img_width)+3] = 255; //alpha  
+         }
+      }
+      OpenGLRender(window,image);      
    }
-   for (int i1=i;i1<img_width;i1++){
+     
+   for (int i1=1;i1<img_width;i1++){
       for (int j1=j;j1<img_height;j1++){
          Ray ray = Ray();
                ray.p = camera->eye;
@@ -613,8 +641,8 @@ void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, Bo
                float diff = 1;
                int k=0;
                while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
-                  float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
-                  float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
+                  float u = (img_width/2.0 - img_width*((i1+(k>0)*rand_n1())/img_width));
+                  float v = (img_height/2.0 - img_height*((j1+(k>0)*rand_n1())/img_height));
                   vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
                   ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
                   Color c = scene->EvaluateRayTree(ray, BB);         
@@ -624,12 +652,12 @@ void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, Bo
                   k++;    
                }
                c_sum = c_sum * (1.0/k);
-               image->SetPixel(i,j,c_sum);
-               image->rawPixels[4*(i+j*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
-               image->rawPixels[4*(i+j*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
-               image->rawPixels[4*(i+j*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
-               image->rawPixels[4*(i+j*img_width)+3] = 255; //alpha  
+               image->SetPixel(i1,j1,c_sum);
+               image->rawPixels[4*(i1+j1*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
+               image->rawPixels[4*(i1+j1*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
+               image->rawPixels[4*(i1+j1*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
+               image->rawPixels[4*(i1+j1*img_width)+3] = 255; //alpha  
       }
    }
-   OpenGLRender(window,image);  
+   OpenGLRender(window,image); 
 }
