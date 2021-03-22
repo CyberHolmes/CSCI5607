@@ -66,6 +66,51 @@ public:
     virtual vec3 GetBoundMax()=0;
 };
 
+enum UnionType{
+        OR,
+        AND,
+        NOT
+};
+
+class CSG : public Obj{
+    Obj* obj1;
+    Obj* obj2;
+    int ut;
+public:    
+    CSG() : obj1(NULL), obj2(NULL) {}
+    CSG(Obj* obj1_, Obj* obj2_, int ut_) : obj1(obj1_), obj2(obj2_), ut(ut_){
+        pos = 0.5*(obj1->GetPos() + obj2->GetPos());}
+    ~CSG(){delete obj1; delete obj2; obj1=NULL; obj2=NULL;}
+    bool Hit(Ray, HitInfo&) override;
+    vec3 GetBoundMin() override;
+    vec3 GetBoundMax() override;
+};
+
+class Box : public Obj{ //box primitive, axis aligned
+    float l_h; //length of the box edges
+    // vec3 n; //the 'orientation' of the box
+public:
+    Box() : Obj(), l_h(0.5){} //default constructor
+    Box(int m_, vec3 p_) : Obj(m_, p_), l_h(0.5) {}//, n(vec3(0,1,0)){} // construct a unit volume box
+    Box(int m_, vec3 p_, float l_) : Obj(m_, p_), l_h(l_/2.0) {}//, n(vec3(0,1,0)){}
+    // Box(int m_, vec3 p_, float l_, vec3 n_) : Obj(m_, p_), l(l_), n(n_){}
+    ~Box(){}
+    bool Hit(Ray, HitInfo&) override;
+    vec3 GetBoundMin() override;
+    vec3 GetBoundMax() override;
+};
+
+class Plane : public Obj{
+    vec3 n; //plane normal
+public:
+    Plane() : Obj(), n(vec3()) {}
+    Plane(int m_, vec3 p_, vec3 n_) : Obj(m_, p_), n(n_) {}
+    ~Plane() {}
+    bool Hit(Ray, HitInfo&) override;
+    vec3 GetBoundMin() override;
+    vec3 GetBoundMax() override;
+};
+
 class Sphere : public Obj{
     // vec3 pos;
     float r;

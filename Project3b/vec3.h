@@ -70,6 +70,10 @@ inline vec3 operator-(vec3 a, vec3 b){
 inline float Distance(vec3 a, vec3 b){
   return (a-b).length();
 }
+//vector projection, project a onto b
+inline vec3 Projection(vec3 a, vec3 b){
+  return dot(a,b.normalized())*(b.normalized());
+}
 
 inline long double Area(vec3 a, vec3 b, vec3 c){
   return (long double)cross(a-b,c-b).length()/2.0;

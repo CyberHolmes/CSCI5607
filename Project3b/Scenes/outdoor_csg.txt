@@ -1,0 +1,37 @@
+camera_pos: 0 0 -60
+camera_fwd: 0 0 -1
+camera_up:  0 1 0
+camera_fov_ha: 15
+output_image: ./out/outdoor_csg.png
+
+#camera_pos: 31.384272 0.000000 -40.187550
+#camera_fwd: 0.564643 0.000000 -0.825336
+#camera_up:  0 1 0
+
+eye=36.877365,0.000000,-35.714077
+forward=0.644218,0.000000,-0.764842
+up=0.000000,1.000000,0.000000
+right=-0.764842,0.000000,-0.644218
+
+#ground plane:
+material: 0 0 0 1 1 1 0 0 0 5 0 0 0 1
+plane: 0 -10 0 0 -1 0
+
+CSG: 1
+#left sphere
+material: 0 0 0 .2 .2 .2 .1 .1 .1 15 .9 .9 .9 1.5
+box: -10 -5 10 5
+sphere: -12 -5 10 3
+
+CSG: 2
+#right sphere
+material: 0 0 0 0.5 0.5 0.5 .5 .5 .5 15 0 0 0 1
+sphere: 5 5 10 10
+sphere: 8 5 8 8
+
+background: 0.5 0.5 1
+
+directional_light: 1 1 1 -1 -1 1 
+directional_light: 1 0 0 0 -1 0
+point_light: 0 100 0 0 -9 10
+#spot_light: 20 5 20 -1 0 -1 45 90

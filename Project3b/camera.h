@@ -1,16 +1,16 @@
+//Camera class, derived based on the camera class code from CSCI5611 Summer2020
 #ifndef CAMERA_H
 #define CAMERA_H
 
 #include "vec3.h"
 #define PI 3.14159265
 
-// probably don't need / want to change any of the below variables
 vec3 negativeMovement;
 vec3 positiveMovement;
 vec3 negativeTurn;
 vec3 positiveTurn;
-float moveSpeed=5;//2.5;
-float turnSpeed=1;//0.5; 
+float moveSpeed=5;
+float turnSpeed=1; 
 
 struct Camera
 {

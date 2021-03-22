@@ -1,0 +1,35 @@
+#Simple sphere: Scene
+camera_pos: -6 2 -4
+#-4.933970,7.675050,-3.008787
+#-6 2 -4
+camera_fwd: -.77 0 -.64
+# -0.701384,0.558343,-0.443074
+#-.77 0 -.64
+camera_up: 0 1 0
+#0.424342,0.826534,0.369832
+camera_fov_ha: 35
+output_image: ./out/box_plane.png
+
+#ground plane:
+material: .75 .75 .75 .75 .75 .75 .3 .3 .3 32 .2 .2 .2 1.5
+plane: 0 0 0 0 -1 0
+
+#red box:
+material: 1 0 0 1 0 0 .3 .3 .3 32 .2 .2 .2 1.5
+box: -3 1 0 .75
+
+#green box:
+material: 0 .7 0 0 .7 0 0 0 0 16 .9 .9 .9 1.1
+box: 0 1.25 0 1
+
+#blue box:
+material: 0 0 1 0 0 1 0 0 0 16 0 0 0 1.0
+box: 3 1.5 0 1.25
+
+#white overhead light
+point_light: 10 10 10 0 5 0
+#directional_light: 0.5 0.5 0.5 0 -1 0
+ambient_light: .25 .25 .75
+background: .15 .15 .15
+
+max_depth: 2

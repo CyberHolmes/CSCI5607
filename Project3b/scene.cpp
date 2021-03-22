@@ -10,14 +10,6 @@ void Scene::AddLight(Light* l){
     numLights++;
 }
 
-// Obj* Scene::GetObject(int i){
-//     return objects[i];
-// }
-
-// Light* Scene::GetLight(int i){
-//     return lights[i];
-// }
-
 int Scene::GetNumLights(){
     return numLights;
 }
@@ -40,21 +32,21 @@ void Scene::SetAmbientlight(Color c){
     ambientlight = c;
 }; 
 
-bool Scene::Hit(const Ray& ray, HitInfo& hi){
-    HitInfo hi_temp=HitInfo();    
-    bool hit = false;
-    //for (std::list<int>::iterator it=mylist.begin(); it != mylist.end(); ++it)
-    for (int i=0; i<numObj; i++){
-        bool curHit = objects[i]->Hit(ray,hi_temp);
-        if (curHit && (hi_temp.t < hi.t)){
-            // printf("hit\n");assert(false);
-            hi = hi_temp;
-            // hi.objI = i;   
-            hit = true;
-        }
-    }
-    return hit;
-};
+// bool Scene::Hit(const Ray& ray, HitInfo& hi){
+//     HitInfo hi_temp=HitInfo();    
+//     bool hit = false;
+//     //for (std::list<int>::iterator it=mylist.begin(); it != mylist.end(); ++it)
+//     for (int i=0; i<numObj; i++){
+//         bool curHit = objects[i]->Hit(ray,hi_temp);
+//         if (curHit && (hi_temp.t < hi.t)){
+//             // printf("hit\n");assert(false);
+//             hi = hi_temp;
+//             // hi.objI = i;   
+//             hit = true;
+//         }
+//     }
+//     return hit;
+// };
 
 Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     Color c_out = Color();

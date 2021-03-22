@@ -1,5 +1,6 @@
-//Project 1 - Moving Square
-//This code assumes SDL2 and OpenGL are both properly installed on your system
+//Project 3b
+//image class, file parser and vec3 are from provided code in HW3 with modification
+//openGL render code is from provided code in HW1.
 
 #include "glad/glad.h"  //Include order can matter here
 
@@ -322,17 +323,16 @@ t_end = std::chrono::high_resolution_clock::now();
          //Scancode referes to a keyboard position, keycode referes to the letter (e.g., EU keyboards)
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_ESCAPE) 
             done = true; //Exit event loop
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) //If "f" is pressed
-            fullscreen = !fullscreen;
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "b" is pressed
+         // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) //If "f" is pressed
+         //    fullscreen = !fullscreen;
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) //If "b" is pressed
          {
             tm = localtime(&t);
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
             image->Write(outFileName.c_str());
          }  
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) //If "w" is pressed
-            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) //If "w" is pressed
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "w" is pressed
             {
                *camera = *camera0;
                printf("resetting the scene.\n");
@@ -397,7 +397,7 @@ t_end = std::chrono::high_resolution_clock::now();
                key_down_pressed();
                RerenderImage(image, BB,numThreads);
             }
-         SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
+         // SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
 //          t_end = std::chrono::high_resolution_clock::now();
 //   printf("OpenGL Display took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
@@ -630,7 +630,7 @@ void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, Bo
       OpenGLRender(window,image);      
    }
      
-   for (int i1=1;i1<img_width;i1++){
+   for (int i1=0;i1<img_width;i1++){
       for (int j1=j;j1<img_height;j1++){
          Ray ray = Ray();
                ray.p = camera->eye;

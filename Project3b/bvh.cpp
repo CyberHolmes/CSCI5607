@@ -23,12 +23,15 @@ bool BoundingSphere::Hit(Ray ray, float& t){
 
 bool BoundingBox::Hit(Ray ray, float& t){
     float t_left_x, t_right_x, t_left_y, t_right_y, t_left_z, t_right_z;
-    t_left_x = (minPos.x - ray.p.x)/ray.d.x;
-    t_right_x = (maxPos.x - ray.p.x)/ray.d.x;
-    t_left_y = (minPos.y - ray.p.y)/ray.d.y;
-    t_right_y = (maxPos.y - ray.p.y)/ray.d.y;
-    t_left_z = (minPos.z - ray.p.z)/ray.d.z;
-    t_right_z = (maxPos.z - ray.p.z)/ray.d.z;
+    float fx = (ray.d.x==0)?MAX_T:1/ray.d.x;
+    float fy = (ray.d.y==0)?MAX_T:1/ray.d.y;
+    float fz = (ray.d.z==0)?MAX_T:1/ray.d.z;
+    t_left_x = (minPos.x - ray.p.x)*fx;///ray.d.x;
+    t_right_x = (maxPos.x - ray.p.x)*fx;///ray.d.x;
+    t_left_y = (minPos.y - ray.p.y)*fy;///ray.d.y;
+    t_right_y = (maxPos.y - ray.p.y)*fy;///ray.d.y;
+    t_left_z = (minPos.z - ray.p.z)*fz;///ray.d.z;
+    t_right_z = (maxPos.z - ray.p.z)*fz;///ray.d.z;
 
     float t_max_x = (t_left_x>t_right_x)?t_left_x:t_right_x;
     float t_max_y = (t_left_y>t_right_y)?t_left_y:t_right_y;
@@ -42,8 +45,15 @@ bool BoundingBox::Hit(Ray ray, float& t){
 
     if (t_max < MIN_T) return false;
     if (t_min > t_max) return false;
-    if (t_min > MAX_T) return false;
+    if (t_min > MAX_T) return false;    
     t = (t_min<0)?t_max:t_min;
+    if (t>MAX_T) return false;
+    // float sf = 0.00001;
+    // if (fabs(ray.p.x)<sf || fabs(ray.p.x)<sf || fabs(ray.p.x)<sf){
+    //     printf("%f\n%f\n%f\n%f\n%f\n%f\n", t_left_x,t_right_x,t_left_y,t_right_y,t_left_z,t_right_z); 
+    //     printf("t=%f\n",t); assert(false);
+    // }
+
     return t_min<=t_max;
 }
 

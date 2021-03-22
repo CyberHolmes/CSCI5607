@@ -40,7 +40,7 @@ public:
     void SetAmbientlight(Color);    
     std::vector<Obj*> GetObjects() {return objects;}
     //Given a point and a direction, check for the closest hit, return information
-    bool Hit(const Ray& ray, HitInfo&);
+    // bool Hit(const Ray& ray, HitInfo&);
 
     Color ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB);
     Color EvaluateRayTree(Ray& ray, BoundingBox* BB);
