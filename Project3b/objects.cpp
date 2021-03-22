@@ -29,7 +29,7 @@ bool Box::Hit(Ray ray, HitInfo& hi) {
     if (t_max < MIN_T) return false;
     if (t_min > t_max) return false;
     if (t_min > MAX_T) return false;
-    float t = (t_min<0)?t_max:t_min;
+    float t = (t_min<MIN_T)?t_max:t_min;
     if (!(t<MAX_T)) return false;
     hi.t = t;
     hi.hitPos = ray.p + hi.t * ray.d;

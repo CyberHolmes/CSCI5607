@@ -46,7 +46,7 @@ bool BoundingBox::Hit(Ray ray, float& t){
     if (t_max < MIN_T) return false;
     if (t_min > t_max) return false;
     if (t_min > MAX_T) return false;    
-    t = (t_min<0)?t_max:t_min;
+    t = (t_min<MIN_T)?t_max:t_min;
     if (t>MAX_T) return false;
     // float sf = 0.00001;
     // if (fabs(ray.p.x)<sf || fabs(ray.p.x)<sf || fabs(ray.p.x)<sf){
