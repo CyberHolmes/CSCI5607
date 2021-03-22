@@ -5,7 +5,7 @@
 #-.77 0 -.64
 #camera_up:  0 1 0
 camera_fov_ha: 35
-output_image: ./out/csg1.png
+output_image: ./out/csg2.png
 
 camera_pos: -6.381256 6.140974 -5.559193
 camera_fwd: -0.675725 0.577433 -0.458222

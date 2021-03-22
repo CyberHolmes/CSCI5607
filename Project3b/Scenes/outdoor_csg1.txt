@@ -2,7 +2,7 @@
 #camera_fwd: 0 0 -1
 #camera_up:  0 1 0
 camera_fov_ha: 15
-output_image: ./out/outdoor_csg.png
+output_image: ./out/outdoor_csg1.png
 
 camera_pos: 31.384272 0.000000 -40.187550
 camera_fwd: 0.564643 0.000000 -0.825336
