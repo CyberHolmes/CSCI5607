@@ -217,10 +217,12 @@ int main(int argc, char *argv[]){
 	bool quit = false;
 	bool topView = false;
 	bool mouse_dragging = false;
-	float p_time = SDL_GetTicks()/1000.f;;
+	float p_time = SDL_GetTicks()/1000.f;
+	
 	while (!quit){
-		if (scene->win){
+		if (scene->win){			
 			curlevel++;
+			score += curlevel*10;
 			if (curlevel == MAX_LEVEL){
 				printf("****************************\n");
 				printf("*  You have beat the game! *\n");
@@ -310,6 +312,9 @@ int main(int argc, char *argv[]){
 			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_c){ //If "c" is pressed
 				scene->me->color = glm::vec3(rand01(),rand01(),rand01());
+			}
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE){ //If "c" is pressed
+				upforce = 150; fwdspeed = 0.5;
 			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r){ //If "c" is pressed
 				delete scene;
@@ -410,6 +415,7 @@ int main(int argc, char *argv[]){
 		if (topView) renderObj(texturedShader,*scene->me,lights,nLights);
 
 		SDL_GL_SwapWindow(window); //Double buffering
+		
 	}
 	
 	//Clean Up
