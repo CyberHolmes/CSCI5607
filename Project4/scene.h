@@ -44,7 +44,7 @@ public:
     bool IsDoor(int n) {return ((map[n] >= 'A') && (map[n] <= 'E'));}
     bool IsKey(int n) {return ((map[n] >= 'a') && (map[n] <= 'e'));}
     bool IsGoal(int n) {return (map[n] == 'G');}
-    bool Update(glm::vec3 p);
+    bool Update(glm::vec3 p, float dt);
 };
 
 #endif

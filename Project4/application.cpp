@@ -369,7 +369,7 @@ int main(int argc, char *argv[]){
 		glUseProgram(texturedShader);		
 		// printf("timePast=%f\n",timePast);
 		camera->Update(dt);
-		if (scene->Update(camera->pos)){
+		if (scene->Update(camera->pos,dt)){
 			scene->me->pos = camera->pos;
 		} else {
 			camera->pos = scene->me->pos;
@@ -403,6 +403,13 @@ int main(int argc, char *argv[]){
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 		glBindVertexArray(vao);
+		if (topView){ //do not show ceiling in top view
+			// scene->me->show = false;
+			scene->objs[1]->show = false;
+		}else{
+			// scene->me->show = true;
+			scene->objs[1]->show = true;
+		}
 
 		for (auto const& obj : scene->objs) {
 			if (obj->show){

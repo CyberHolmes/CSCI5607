@@ -17,7 +17,11 @@ void Scene::ReadMap(const char* fileName){
     //floor
     int obj_cnt = 0;
     float yshift = 0.0;
+    //floor
     Obj* tmp = new Obj(0,4,glm::vec3((nc+1)*cx/2.0,-cy/2.0,(nr+1)*cz/2.0),glm::vec3((nc+1)*cx,1,(nr+1)*cz));
+    objs.emplace_back(tmp); obj_cnt++;
+    //ceiling
+    tmp = new Obj(0,3,glm::vec3((nc+1)*cx/2.0,0.5*cy,(nr+1)*cz/2.0),glm::vec3((nc+1)*cx,1,(nr+1)*cz));
     objs.emplace_back(tmp); obj_cnt++;
     //walls
     // for (int i=1; i<=nc; i++){
@@ -47,7 +51,7 @@ void Scene::ReadMap(const char* fileName){
     //red, blue, green, yellow, purple
     glm::vec3 colors[5] = {glm::vec3(1.0,0.8,0.0), glm::vec3(0.9,0.1,0.2)
         ,glm::vec3(0.2,0.8,0.2),glm::vec3(0.1,0.6,1.0),glm::vec3(0.5,0.0,0.5)};
-    float doorScale = 0.64;
+    float doorScale = 0.66;
     while(1){
         int curR = nr - n/nc;
         int curC = nc - n%nc;
@@ -73,9 +77,13 @@ void Scene::ReadMap(const char* fileName){
                 case 'D':
                 case 'E':
                     if (map[n-1]=='0'){
-                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.5,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65]);
+                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
+                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
+                        /*Obj(int modelID_, int texID_, glm::vec3 pos_, glm::vec3 scale_, glm::vec3 rotAxis_, float rotRad_, glm::vec3 color_,
+                                glm::vec3 end_pos_, glm::vec3 end_rotAxis_, float end_rotRad_)*/
                     } else {
-                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.5,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65]);
+                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
+                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);
                     }
                     objs.emplace_back(tmp);
                     map_objIdx.emplace_back(obj_cnt);
@@ -88,8 +96,11 @@ void Scene::ReadMap(const char* fileName){
                     obj_cnt++;
                     break;
                 case 'L': //light
-                    lights.emplace_back(glm::vec3(curPos.x,cy-2,curPos.z));
+                    lights.emplace_back(glm::vec3(curPos.x,0.32*cy,curPos.z));
+                    tmp = new Obj(5,-1,curPos+glm::vec3(0,0.43*cy,0),glm::vec3(0.5,0.5,0.5));
+                    objs.emplace_back(tmp);
                     map_objIdx.emplace_back(-1);
+                    obj_cnt++;
                     break;
                 case 'a': //keys
                 case 'b':
@@ -162,7 +173,7 @@ bool Scene::GetCells(glm::vec3 p, float l, int* cells, int& nCells){
     return true;
 }
 
-bool Scene::Update(glm::vec3 p){ //only update scene if p is valid
+bool Scene::Update(glm::vec3 p, float dt){ //only update scene if p is valid
     int nCells=0;
     int cells[5]; //no more than 5 cells can be occupied by an entity at a given time
     if (!GetCells(p,me->GetSize()/2,cells,nCells)) return false;
@@ -177,9 +188,14 @@ bool Scene::Update(glm::vec3 p){ //only update scene if p is valid
             if (me->HasKey(k)){
                 //open the door and update the map to make it free to pass
                 int obj_idx = map_objIdx[n];
-                objs[obj_idx]->rotRad +=3.14/2.0;
-                objs[obj_idx]->pos += glm::vec3(cx/2.0,0,cz/2.0);
-                map[n] = 'O'; //open door
+                // objs[obj_idx]->rotRad = objs[obj_idx]->end_rotRad;
+                // objs[obj_idx]->pos = objs[obj_idx]->end_pos;
+                objs[obj_idx]->rotRad +=3.14/2.0*dt*1;                
+                objs[obj_idx]->pos = objs[obj_idx]->pos + glm::vec3(float(cx/2.0),0,float(cz/2.0)) * (dt*1);
+                objs[obj_idx]->rotRad = (fabs(objs[obj_idx]->rotRad - objs[obj_idx]->end_rotRad)<0.001)? objs[obj_idx]->end_rotRad : objs[obj_idx]->rotRad;
+                objs[obj_idx]->pos = (glm::distance(objs[obj_idx]->pos, objs[obj_idx]->end_pos)<0.001)? objs[obj_idx]->end_pos : objs[obj_idx]->pos;
+                if ((objs[obj_idx]->pos == objs[obj_idx]->end_pos) && (objs[obj_idx]->rotRad == objs[obj_idx]->end_rotRad))
+                    map[n] = 'O'; //open door
             } else {
                 return false;
             }
