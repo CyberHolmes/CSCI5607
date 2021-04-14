@@ -21,7 +21,7 @@ public:
     float y_pos;
     const float g = -5; //gravity
     
-    Camera() : pos(3,0,0), dir(0,0,0),up(0,1,0),right(0,0,-1),hAngle(3.14*1.5),vAngle(0),FoV(3.14/8),turnSpeed(0.8),moveSpeed(5),y_pos(0){}
+    Camera() : pos(3,0,0), dir(0,0,0),up(0,1,0),right(0,0,-1),hAngle(3.14*1.5),vAngle(0),FoV(3.14/2.2),turnSpeed(0.8),moveSpeed(5),y_pos(0){}
     Camera(Camera& c) : pos(c.pos), dir(c.dir), up(c.up), right(c.right),hAngle(c.hAngle),vAngle(c.vAngle),FoV(c.FoV),
         turnSpeed(c.turnSpeed),moveSpeed(c.moveSpeed),y_pos(c.y_pos) {}
     void operator= (Camera&c){pos = c.pos; dir = c.dir; up = c.up; right = c.right, hAngle = c.hAngle; vAngle = c.vAngle;

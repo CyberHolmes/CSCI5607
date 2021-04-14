@@ -68,7 +68,7 @@ const char* texFiles[NUM_TEX_FILES] = {"textures/wood.bmp","textures/brick.bmp",
 //0-cube, 1-door, 2-girl, 3-treasure chest, 4-key, 5-sphere, 6-teapot, 7-knot
 const char* modelFiles[NUM_MODEL_FILES] = {"models/cube.txt","models/Door3.txt","models/Female_Alternative.txt"
 	,"models/Chest_Closed.txt","models/Key4.txt","models/sphere.txt"
-	,"models/teapot.txt","models/knot.txt"
+	,"models/MyKey.txt","models/Sword.txt"
 };
 const char* sceneFiles[MAX_LEVEL] = {"maps/no_doors_l0.txt", "maps/map1.txt", "maps/door_w_key_l2.txt", "maps/map2.txt"};
 
@@ -80,6 +80,7 @@ int numModels = 0;
 int totalNumVerts = 0;
 int modelStartVert[MAX_MODELS] = {0};
 int modelNumVerts[MAX_MODELS] = {0};
+bool useFlashLight = false; //0-disable, >0-use
 
 bool DEBUG_ON = false;
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
@@ -216,6 +217,7 @@ int main(int argc, char *argv[]){
 	
 	bool quit = false;
 	bool topView = false;
+	
 	bool mouse_dragging = false;
 	float p_time = SDL_GetTicks()/1000.f;
 	
@@ -313,6 +315,9 @@ int main(int argc, char *argv[]){
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_c){ //If "c" is pressed
 				scene->me->color = glm::vec3(rand01(),rand01(),rand01());
 			}
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l){ //If "c" is pressed
+				useFlashLight = !useFlashLight;
+			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE){ //If "c" is pressed
 				upforce = 150; fwdspeed = 0.5;
 			}
@@ -344,9 +349,8 @@ int main(int argc, char *argv[]){
 			if (windowEvent.type == SDL_MOUSEWHEEL)//scroll up
 			{
 				camera->FoV -= 100.0 * dt * (float)windowEvent.wheel.y/(float)screenHeight;
-				// FoV -= 100.0 * (float)windowEvent.wheel.x/(float)screen_width;
-				camera->FoV = (camera->FoV<0.1)?0.1:(camera->FoV>1.3)?1.3:camera->FoV;
-				// printf("windowEvent.wheel.y=%d\n",windowEvent.wheel.y);
+				camera->FoV = (camera->FoV<0.5)?0.1:(camera->FoV>1.3)?1.3:camera->FoV;
+				// printf("FoV=%f\n",camera->FoV);
 			}
 		}
 
@@ -440,17 +444,25 @@ int main(int argc, char *argv[]){
 void renderObj(int shaderProgram, Obj obj, float* lights, int nLights){
 	GLint uniColor = glGetUniformLocation(shaderProgram, "inColor");
 	glUniform3fv(uniColor, 1, glm::value_ptr(obj.color));
+	
 	GLint u_nLights = glGetUniformLocation(shaderProgram, "numLights");
 	glUniform1i(u_nLights, nLights);
 	// printf("nLights=%d\n",nLights);
 	GLint u_lights = glGetUniformLocation(shaderProgram, "lights");
 	glUniform3fv(u_lights,nLights, lights);
 
-	GLint u_spotpos = glGetUniformLocation(shaderProgram, "spotpos");
-	// printf("camera->dir.x=%f, camera->dir.z=%f\n",camera->dir.x,camera->dir.z);
-	glUniform3f(u_spotpos,camera->pos.x,4,camera->pos.z);
-	GLint u_spotdir = glGetUniformLocation(shaderProgram, "spotdir");
-	glUniform3f(u_spotdir,camera->dir.x,camera->dir.y,camera->dir.z);
+	GLint u_usespot = glGetUniformLocation(shaderProgram, "enable_SpotLight");
+	if (useFlashLight){		
+		glUniform1i(u_usespot,1);
+		GLint u_spotpos = glGetUniformLocation(shaderProgram, "spotpos");
+		// printf("camera->dir.x=%f, camera->dir.z=%f\n",camera->dir.x,camera->dir.z);
+		glUniform3f(u_spotpos,camera->pos.x,camera->pos.y-1,camera->pos.z);
+		// printf("y=%f\n",camera->pos.y);
+		GLint u_spotdir = glGetUniformLocation(shaderProgram, "spotdir");
+		glUniform3f(u_spotdir,camera->dir.x,camera->dir.y,camera->dir.z);
+	} else {
+		glUniform1i(u_usespot,0);
+	}
       
   	GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
 

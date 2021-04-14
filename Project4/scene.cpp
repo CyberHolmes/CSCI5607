@@ -79,11 +79,11 @@ void Scene::ReadMap(const char* fileName){
                     if (map[n-1]=='0'){
                         tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
                         curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
-                        /*Obj(int modelID_, int texID_, glm::vec3 pos_, glm::vec3 scale_, glm::vec3 rotAxis_, float rotRad_, glm::vec3 color_,
-                                glm::vec3 end_pos_, glm::vec3 end_rotAxis_, float end_rotRad_)*/
+                        // tmp = new Obj(6,-1,curPos+glm::vec3(0,2,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57-0.5, colors[c-65],
+                        // curPos+glm::vec3(float(cx/2.0),2,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
                     } else {
                         tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
-                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);
+                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);                        
                     }
                     objs.emplace_back(tmp);
                     map_objIdx.emplace_back(obj_cnt);
@@ -107,7 +107,7 @@ void Scene::ReadMap(const char* fileName){
                 case 'c':
                 case 'd':
                 case 'e':
-                    tmp = new Obj(4,-1,curPos+glm::vec3(0,-1,0),glm::vec3(1.5,1.5,1.5),glm::vec3(0,1,1), 3.14/2.0, colors[c-97]);
+                    tmp = new Obj(4,-1,curPos+glm::vec3(0,-1,0),glm::vec3(1,1,1),glm::vec3(0,1,1), 3.14/2.0, colors[c-97]);
                     objs.emplace_back(tmp);
                     map_objIdx.emplace_back(obj_cnt);
                     obj_cnt++;
@@ -190,25 +190,33 @@ bool Scene::Update(glm::vec3 p, float dt){ //only update scene if p is valid
                 int obj_idx = map_objIdx[n];
                 // objs[obj_idx]->rotRad = objs[obj_idx]->end_rotRad;
                 // objs[obj_idx]->pos = objs[obj_idx]->end_pos;
-                objs[obj_idx]->rotRad +=3.14/2.0*dt*1;                
-                objs[obj_idx]->pos = objs[obj_idx]->pos + glm::vec3(float(cx/2.0),0,float(cz/2.0)) * (dt*1);
-                objs[obj_idx]->rotRad = (fabs(objs[obj_idx]->rotRad - objs[obj_idx]->end_rotRad)<0.001)? objs[obj_idx]->end_rotRad : objs[obj_idx]->rotRad;
-                objs[obj_idx]->pos = (glm::distance(objs[obj_idx]->pos, objs[obj_idx]->end_pos)<0.001)? objs[obj_idx]->end_pos : objs[obj_idx]->pos;
-                if ((objs[obj_idx]->pos == objs[obj_idx]->end_pos) && (objs[obj_idx]->rotRad == objs[obj_idx]->end_rotRad))
+                // objs[obj_idx]->rotRad = (fabs(objs[obj_idx]->rotRad - objs[obj_idx]->end_rotRad)<0.001)? objs[obj_idx]->end_rotRad : objs[obj_idx]->rotRad;
+                // objs[obj_idx]->pos = (glm::distance(objs[obj_idx]->pos, objs[obj_idx]->end_pos)<0.01)? objs[obj_idx]->end_pos : objs[obj_idx]->pos;
+                if ((fabs(objs[obj_idx]->rotRad - objs[obj_idx]->end_rotRad)<0.001) || (glm::distance(objs[obj_idx]->pos, objs[obj_idx]->end_pos)<0.01)){
+                    objs[obj_idx]->rotRad = objs[obj_idx]->end_rotRad;
+                    objs[obj_idx]->pos = objs[obj_idx]->end_pos;
                     map[n] = 'O'; //open door
+                } else {
+                    objs[obj_idx]->rotRad +=3.14/2.0*dt*1;                
+                    objs[obj_idx]->pos = objs[obj_idx]->pos + glm::vec3(float(cx/2.0),0,float(cz/2.0)) * (dt*1);                    
+                }                
             } else {
                 return false;
             }
         }
         if (IsKey(n)){
-            char k = map[n];
-            me->AddKey(k);
             int obj_idx = map_objIdx[n];
-            objs[obj_idx]->show = false;
-            map[n] = '0';
+            if (glm::distance(p,objs[obj_idx]->pos)<2){
+                char k = map[n];
+                me->AddKey(k);            
+                objs[obj_idx]->show = false;
+                map[n] = '0';
+            }
         }
         if (IsGoal(n)){
-            win = true;
+            int obj_idx = map_objIdx[n];
+            if (glm::distance(p,objs[obj_idx]->pos)<2)
+                win = true;
         }
     }
     return true;   
