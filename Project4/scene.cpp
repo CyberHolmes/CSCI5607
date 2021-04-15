@@ -51,7 +51,7 @@ void Scene::ReadMap(const char* fileName){
     //red, blue, green, yellow, purple
     glm::vec3 colors[5] = {glm::vec3(1.0,0.8,0.0), glm::vec3(0.9,0.1,0.2)
         ,glm::vec3(0.2,0.8,0.2),glm::vec3(0.1,0.6,1.0),glm::vec3(0.5,0.0,0.5)};
-    float doorScale = 0.66;
+    float doorScale = 0.6;
     while(1){
         int curR = nr - n/nc;
         int curC = nc - n%nc;
@@ -77,13 +77,15 @@ void Scene::ReadMap(const char* fileName){
                 case 'D':
                 case 'E':
                     if (map[n-1]=='0'){
-                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
-                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
-                        // tmp = new Obj(6,-1,curPos+glm::vec3(0,2,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57-0.5, colors[c-65],
-                        // curPos+glm::vec3(float(cx/2.0),2,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
+                        // tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
+                        // curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
+                        tmp = new Obj(8,-1,curPos+glm::vec3(0,0,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
+                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
                     } else {
-                        tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
-                        curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);                        
+                        // tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
+                        // curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);      
+                        tmp = new Obj(8,-1,curPos+glm::vec3(0,0,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
+                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);                  
                     }
                     objs.emplace_back(tmp);
                     map_objIdx.emplace_back(obj_cnt);
@@ -215,7 +217,7 @@ bool Scene::Update(glm::vec3 p, float dt){ //only update scene if p is valid
         }
         if (IsGoal(n)){
             int obj_idx = map_objIdx[n];
-            if (glm::distance(p,objs[obj_idx]->pos)<2)
+            // if (glm::distance(p,objs[obj_idx]->pos)<8)
                 win = true;
         }
     }

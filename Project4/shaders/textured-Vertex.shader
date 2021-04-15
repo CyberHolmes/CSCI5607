@@ -29,7 +29,9 @@ void main() {
    // lightPos = inLightPos;
    vec4 norm4 = transpose(inverse(view*model)) * vec4(inNormal,0.0);
    vertNormal = normalize(norm4.xyz);
-   vec2 temp = vec2(model[0][0],model[2][2]);
+   vec2 temp = vec2(model[0][0], model[2][2]);
+   if (abs(model[0][0])<1.1) {temp = vec2(model[1][1],model[2][2]);}
+   else if (abs(model[2][2])<1.1) {temp = vec2(model[0][0],model[1][1]);}
    texcoord = temp*inTexcoord;
    // texcoord = inTexcoord;
    view1 = view;

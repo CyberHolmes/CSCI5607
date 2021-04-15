@@ -16,12 +16,9 @@ const char* INSTRUCTIONS =
 "***************\n"
 "This is a treasure hunt game.\n"
 "\n"
-"Up/down (w/s) - Moves player forward and backward.\n"
-"left/right (a/d) - Turn player view to left and right.\n"
-"Moving mouse with left button down - Change player's view angle.\n"
-"l - Turn on/off the flash light.\n"
-"t - Toggles between bird's eye view and first person view.\n"
-"space - Jump.\n"
+"Up/down/left/right - Changes first person's view angle and facing direction.\n"
+"a/d/w/s - Moves first person position.\n"
+"t - toggles between bird's eye view and first person view.\n"
 "c - Changes first person's color.\n"
 "***************\n"
 ;
@@ -64,14 +61,14 @@ int numTextures = 0;
 #define MAX_MODELS 100 // no more than 100 textures for now
 #define MAX_LEVEL 4
 #define NUM_TEX_FILES 5
-#define NUM_MODEL_FILES 9
+#define NUM_MODEL_FILES 8
 GLuint textures[MAX_TEXTURES] = {0}; 
 //0-wood, 1-brick, 2-brick1, 3-laminate1, 4-tile1
 const char* texFiles[NUM_TEX_FILES] = {"textures/wood.bmp","textures/brick.bmp","textures/brick1.bmp","textures/laminate1.bmp","textures/tile1.bmp"};
 //0-cube, 1-door, 2-girl, 3-treasure chest, 4-key, 5-sphere, 6-teapot, 7-knot
 const char* modelFiles[NUM_MODEL_FILES] = {"models/cube.txt","models/Door3.txt","models/Female_Alternative.txt"
 	,"models/Chest_Closed.txt","models/Key4.txt","models/sphere.txt"
-	,"models/MyKey.txt","models/Sword.txt","models/Mydoor1.txt"
+	,"models/teapot.txt","models/knot.txt"
 };
 const char* sceneFiles[MAX_LEVEL] = {"maps/no_doors_l0.txt", "maps/map1.txt", "maps/door_w_key_l2.txt", "maps/map2.txt"};
 
@@ -83,7 +80,6 @@ int numModels = 0;
 int totalNumVerts = 0;
 int modelStartVert[MAX_MODELS] = {0};
 int modelNumVerts[MAX_MODELS] = {0};
-bool useFlashLight = false; //0-disable, >0-use
 
 bool DEBUG_ON = false;
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
@@ -219,19 +215,9 @@ int main(int argc, char *argv[]){
 	}
 	
 	bool quit = false;
-	bool topView = false;	
+	bool topView = false;
 	bool mouse_dragging = false;
-	float p_time = SDL_GetTicks()/1000.f;
-	bool upKeyPressed = false;
-	bool dnKeyPressed = false;
-	bool leftKeyPressed = false;
-	bool rightKeyPressed = false;
-	bool spaceKeyPressed = false;
-	bool reset = false;
-	bool shiftKeyPressed = false;
-
-	// glm::vec3 pos0 = camera->pos;
-	
+	float p_time = SDL_GetTicks()/1000.f;;
 	while (!quit){
 		if (scene->win){			
 			curlevel++;
@@ -245,17 +231,35 @@ int main(int argc, char *argv[]){
 			} else {
 				printf("****************************\n");
 				printf("Congratulations!\n");
-				printf("Moving to level %d\n",curlevel);
+				printf("*Moving to level %d\n",curlevel);
 				printf("****************************\n");
 				curMap = sceneFiles[curlevel];
+				delete scene;
+				delete lights;
+				Scene* scene = new Scene();
+				scene->ReadMap(curMap.c_str());
+				camera->pos = scene->me->pos;
+				sceneW = float((scene->nc+1)*scene->cx);
+				sceneH = float((scene->nr+1)*scene->cz);
+				far0 = (sceneW>sceneH)?sceneW:sceneH;
+
+				nLights = scene->lights.size();
+				lights = new float[nLights*3];
+				memset(lights, 0, sizeof(float)*nLights*3);
+				idx=0;
+				for (int i=0;i<nLights;i++){
+					lights[idx] = scene->lights[i].x; idx++;
+					lights[idx] = scene->lights[i].y; idx++;
+					lights[idx] = scene->lights[i].z; idx++;
+				}
+				mouse_dragging = false;
+				topView = false;
 			}
-			reset = true;
-		}	
+		}
 		timePast = SDL_GetTicks()/1000.f;
 		float dt = timePast - p_time;
 		p_time = timePast;
-		// printf("camera.pos.y=%f\n",camera->pos.y);
-		while (SDL_PollEvent(&windowEvent)){  //inspect all events in the queue					
+		while (SDL_PollEvent(&windowEvent)){  //inspect all events in the queue
 			if (windowEvent.type == SDL_QUIT) quit = true;
 			//List of keycodes: https://wiki.libsdl.org/SDL_Keycode - You can catch many special keys
 			//Scancode referes to a keyboard position, keycode referes to the letter (e.g., EU keyboards)
@@ -265,87 +269,94 @@ int main(int argc, char *argv[]){
 				fullscreen = !fullscreen;
 				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
 			}
-			// if (windowEvent.type == SDL_KEYDOWN && (windowEvent.key.keysym.mod & KMOD_SHIFT)) shiftKeyPressed = true;
-			// if (windowEvent.type == SDL_KEYUP && (windowEvent.key.keysym.mod & KMOD_SHIFT)) shiftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && (windowEvent.key.keysym.sym == SDLK_RSHIFT)) shiftKeyPressed = true;
-			if (windowEvent.type == SDL_KEYDOWN && (windowEvent.key.keysym.sym == SDLK_LSHIFT)) shiftKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && (windowEvent.key.keysym.sym == SDLK_RSHIFT)) shiftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYUP && (windowEvent.key.keysym.sym == SDLK_LSHIFT)) shiftKeyPressed = false;
-			// if (windowEvent.type == SDL_KEYUP && (windowEvent.key.keysym.mod & KMOD_SHIFT)) shiftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_UP) upKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) upKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_DOWN) dnKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) dnKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_LEFT) leftKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) leftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_RIGHT) rightKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) rightKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_w) upKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) upKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_s) dnKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) dnKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_a) leftKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) leftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = false;
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_UP){ //If "up key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) vPosTurn = 2; //Is shift pressed?
+				else vPosTurn = 1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_DOWN){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) vNegTurn = -2; //Is shift pressed?
+				else vNegTurn = -1;
+				// camera->PrintState();
+			}
+				if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_LEFT){ //If "up key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) hPosTurn = 2; //Is shift pressed?
+				else hPosTurn = 1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_RIGHT){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) hNegTurn = -2; //Is shift pressed?
+				else hNegTurn = -1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_a){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) negRight = -2; //Is shift pressed?
+				else negRight = -1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_d){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) posRight = 2; //Is shift pressed?
+				else posRight = 1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_w){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) posFwd = 2; //Is shift pressed?
+				else posFwd = 1;
+				// camera->PrintState();
+			}
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_s){ //If "down key" is pressed
+				if (windowEvent.key.keysym.mod & KMOD_SHIFT) negFwd = -2; //Is shift pressed?
+				else negFwd = -1;
+				// camera->PrintState();
+			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_c){ //If "c" is pressed
 				scene->me->color = glm::vec3(rand01(),rand01(),rand01());
 			}
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l) useFlashLight = !useFlashLight;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) spaceKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) reset = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_t) topView = !topView;
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r){ //If "c" is pressed
+				delete scene;
+				delete lights;
+				Scene* scene = new Scene();
+				scene->ReadMap(curMap.c_str());
+				camera->pos = scene->me->pos;
+				sceneW = float((scene->nc+1)*scene->cx);
+				sceneH = float((scene->nr+1)*scene->cz);
+				far0 = (sceneW>sceneH)?sceneW:sceneH;
+
+				nLights = scene->lights.size();
+				lights = new float[nLights*3];
+				memset(lights, 0, sizeof(float)*nLights*3);
+				idx=0;
+				for (int i=0;i<nLights;i++){
+					lights[idx] = scene->lights[i].x; idx++;
+					lights[idx] = scene->lights[i].y; idx++;
+					lights[idx] = scene->lights[i].z; idx++;
+				}
+				mouse_dragging = false;
+				topView = false;
+			}
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_t){ 
+				topView = !topView;
+			}
 			if (windowEvent.type == SDL_MOUSEWHEEL)//scroll up
 			{
 				camera->FoV -= 100.0 * dt * (float)windowEvent.wheel.y/(float)screenHeight;
-				camera->FoV = (camera->FoV<0.5)?0.1:(camera->FoV>1.3)?1.3:camera->FoV;
-				// printf("FoV=%f\n",camera->FoV);
+				// FoV -= 100.0 * (float)windowEvent.wheel.x/(float)screen_width;
+				camera->FoV = (camera->FoV<0.1)?0.1:(camera->FoV>1.3)?1.3:camera->FoV;
+				// printf("windowEvent.wheel.y=%d\n",windowEvent.wheel.y);
 			}
 		}
-		if (reset){
-			delete scene;
-			delete lights;
-			Scene* scene = new Scene();
-			scene->ReadMap(curMap.c_str());
-			camera->pos = scene->me->pos;
-			sceneW = float((scene->nc+1)*scene->cx);
-			sceneH = float((scene->nr+1)*scene->cz);
-			far0 = (sceneW>sceneH)?sceneW:sceneH;
 
-			nLights = scene->lights.size();
-			lights = new float[nLights*3];
-			memset(lights, 0, sizeof(float)*nLights*3);
-			idx=0;
-			for (int i=0;i<nLights;i++){
-				lights[idx] = scene->lights[i].x; idx++;
-				lights[idx] = scene->lights[i].y; idx++;
-				lights[idx] = scene->lights[i].z; idx++;
-			}
-			mouse_dragging = false;
-			topView = false;
-			reset = false;
-		}
-		if (camera->pos.y>=0.001) spaceKeyPressed = false;
-		if (upKeyPressed) posFwd = (shiftKeyPressed)? 2 :1;
-		if (dnKeyPressed) negFwd = (shiftKeyPressed)? -2 :-1;
-		if (leftKeyPressed) hPosTurn = (shiftKeyPressed)? 2 :1;
-		if (rightKeyPressed) hNegTurn = (shiftKeyPressed)? -2 :-1;
-		if (spaceKeyPressed) {upforce = (shiftKeyPressed)? 250 :180; fwdspeed = 2*(posFwd+negFwd); spaceKeyPressed = false;}
-		// if (glm::distance(camera->pos,pos0)>0.01 && camera->pos.y<0.001){
-		// printf("pos=%f,%f,%f\n", camera->pos.x, camera->pos.y, camera->pos.z);
-		// }
-		// pos0=camera->pos;
 		int mx, my;    
 		if (SDL_GetMouseState(&mx, &my) & SDL_BUTTON(SDL_BUTTON_LEFT)) { //Is the mouse down?
 			if (mouse_dragging){
 			// Compute new orientation
 			camera->hAngle += 0.08f * dt * float(screenWidth/2 - mx );
 			camera->vAngle  += 0.08f * dt * float( screenHeight/2 - my );
-			camera->vAngle = fmin( 0.9, fmax( -0.9, camera->vAngle) );
+			camera->vAngle = fmin( 0.5, fmax( -0.5, camera->vAngle) );
 			SDL_WarpMouseInWindow(window,screenWidth/2, screenHeight/2); //reset mouse position
 		} 
 		mouse_dragging = true;
-		} else {mouse_dragging = false;}		
+		} else {mouse_dragging = false;}
       
 		// Clear the screen to default color
 		glClearColor(.2f, 0.4f, 0.8f, 1.0f);
@@ -354,13 +365,11 @@ int main(int argc, char *argv[]){
 		glUseProgram(texturedShader);		
 		// printf("timePast=%f\n",timePast);
 		camera->Update(dt);
-		if (scene->Update(camera->pos,dt)){
+		if (scene->Update(camera->pos)){
 			scene->me->pos = camera->pos;
 		} else {
-			scene->me->pos.y = 0; // in case of jumping
 			camera->pos = scene->me->pos;
 		}
-		// camera->PrintState();
 
 		scene->me->rotRad = camera->hAngle;
 
@@ -390,13 +399,6 @@ int main(int argc, char *argv[]){
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 		glBindVertexArray(vao);
-		if (topView){ //do not show ceiling in top view
-			// scene->me->show = false;
-			scene->objs[1]->show = false;
-		}else{
-			// scene->me->show = true;
-			scene->objs[1]->show = true;
-		}
 
 		for (auto const& obj : scene->objs) {
 			if (obj->show){
@@ -409,7 +411,6 @@ int main(int argc, char *argv[]){
 		if (topView) renderObj(texturedShader,*scene->me,lights,nLights);
 
 		SDL_GL_SwapWindow(window); //Double buffering
-		
 	}
 	
 	//Clean Up
@@ -427,25 +428,17 @@ int main(int argc, char *argv[]){
 void renderObj(int shaderProgram, Obj obj, float* lights, int nLights){
 	GLint uniColor = glGetUniformLocation(shaderProgram, "inColor");
 	glUniform3fv(uniColor, 1, glm::value_ptr(obj.color));
-	
 	GLint u_nLights = glGetUniformLocation(shaderProgram, "numLights");
 	glUniform1i(u_nLights, nLights);
 	// printf("nLights=%d\n",nLights);
 	GLint u_lights = glGetUniformLocation(shaderProgram, "lights");
 	glUniform3fv(u_lights,nLights, lights);
 
-	GLint u_usespot = glGetUniformLocation(shaderProgram, "enable_SpotLight");
-	if (useFlashLight){
-		glUniform1i(u_usespot,1);
-		GLint u_spotpos = glGetUniformLocation(shaderProgram, "spotpos");
-		// printf("camera->dir.x=%f, camera->dir.z=%f\n",camera->dir.x,camera->dir.z);
-		glUniform3f(u_spotpos,camera->pos.x,camera->pos.y-1,camera->pos.z);
-		// printf("y=%f\n",camera->pos.y);
-		GLint u_spotdir = glGetUniformLocation(shaderProgram, "spotdir");
-		glUniform3f(u_spotdir,camera->dir.x,camera->dir.y - fabs(camera->dir.y)*0.2,camera->dir.z);
-	} else {
-		glUniform1i(u_usespot,0);
-	}
+	GLint u_spotpos = glGetUniformLocation(shaderProgram, "spotpos");
+	// printf("camera->dir.x=%f, camera->dir.z=%f\n",camera->dir.x,camera->dir.z);
+	glUniform3f(u_spotpos,camera->pos.x,4,camera->pos.z);
+	GLint u_spotdir = glGetUniformLocation(shaderProgram, "spotdir");
+	glUniform3f(u_spotdir,camera->dir.x,camera->dir.y,camera->dir.z);
       
   	GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
 
@@ -612,10 +605,8 @@ GLuint AddTexture(int& numTextures, const char* fileName){
     glBindTexture(GL_TEXTURE_2D, tex);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, surface->w,surface->h, 0, GL_BGR,GL_UNSIGNED_BYTE,surface->pixels);
 	glGenerateMipmap(GL_TEXTURE_2D); //Mip maps the texture
     
