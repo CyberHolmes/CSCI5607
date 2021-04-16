@@ -56,8 +56,10 @@ using namespace std;
 #include "camera.h"
 #include "scene.h"
 
-int screenWidth = 800; 
-int screenHeight = 600;  
+int screenWidth0 = 800; 
+int screenHeight0 = 600; 
+int screenWidth = screenWidth0;
+int screenHeight = screenHeight0; 
 float timePast = 0;
 int numTextures = 0;
 #define MAX_TEXTURES 100 // no more than 100 textures for now
@@ -69,9 +71,9 @@ GLuint textures[MAX_TEXTURES] = {0};
 //0-wood, 1-brick, 2-brick1, 3-laminate1, 4-tile1
 const char* texFiles[NUM_TEX_FILES] = {"textures/wood.bmp","textures/brick.bmp","textures/brick1.bmp","textures/laminate1.bmp","textures/tile1.bmp"};
 //0-cube, 1-door, 2-girl, 3-treasure chest, 4-key, 5-sphere, 6-teapot, 7-knot
-const char* modelFiles[NUM_MODEL_FILES] = {"models/cube.txt","models/Door3.txt","models/Female_Alternative.txt"
+const char* modelFiles[NUM_MODEL_FILES] = {"models/cube.txt","models/Mydoor1.txt","models/Female_Alternative.txt"
 	,"models/Chest_Closed.txt","models/Key4.txt","models/sphere.txt"
-	,"models/MyKey.txt","models/Sword.txt","models/Mydoor1.txt"
+	,"models/MyKey.txt","models/Sword.txt","models/Skeleton.txt"
 };
 const char* sceneFiles[MAX_LEVEL] = {"maps/no_doors_l0.txt", "maps/map1.txt", "maps/door_w_key_l2.txt", "maps/map2.txt"};
 
@@ -89,7 +91,7 @@ bool DEBUG_ON = false;
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
 GLuint AddTexture(int& numTextures, const char* fileName);
 float* CreateModel(int& numModels, int* modelStartVert, int* modelNumVerts, int& totalNumVerts, const char* fileName);
-void renderObj(int shaderProgram, Obj obj, float* lights, int nLights);
+void renderObj(int shaderProgram, Obj* obj, float* lights, int nLights);
 bool fullscreen = false;
 void Win2PPM(int width, int height);
 
@@ -113,6 +115,12 @@ int main(int argc, char *argv[]){
 		curMap = argv[0];
 		argv += 1, argc -= 1;
 	}
+
+	SDL_DisplayMode DM;
+	SDL_GetCurrentDisplayMode(0, &DM);
+	auto fullWidth = DM.w;
+	auto fullHeight = DM.h;
+	printf("width=%d, height=%d\n",fullWidth,fullHeight);
 
 	//Ask SDL to get a recent version of OpenGL (3.2 or greater)
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -202,7 +210,7 @@ int main(int argc, char *argv[]){
 
 	Scene* scene = new Scene();
 	scene->ReadMap(curMap.c_str());
-	camera->pos = scene->me->pos;
+	camera->pos = scene->me->GetPos();
 	float sceneW = float((scene->nc+1)*scene->cx);
 	float sceneH = float((scene->nr+1)*scene->cz);
 	float far0 = (sceneW>sceneH)?sceneW:sceneH;
@@ -250,7 +258,8 @@ int main(int argc, char *argv[]){
 				curMap = sceneFiles[curlevel];
 			}
 			reset = true;
-		}	
+		}
+		if (scene->gameOver) reset = true;
 		timePast = SDL_GetTicks()/1000.f;
 		float dt = timePast - p_time;
 		p_time = timePast;
@@ -263,7 +272,18 @@ int main(int argc, char *argv[]){
 				quit = true; //Exit event loop
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f){ //If "f" is pressed
 				fullscreen = !fullscreen;
-				SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Toggle fullscreen 
+				if (fullscreen) {
+					// screenWidth = fullWidth;
+					// screenHeight = fullHeight;
+					// SDL_SetWindowSize(window, screenWidth, screenHeight);
+					SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP); //Toggle fullscreen 
+					
+				} else {
+					// screenWidth = screenWidth0;
+					// screenHeight = screenHeight0;
+					// SDL_SetWindowSize(window, screenWidth, screenHeight);
+					SDL_SetWindowFullscreen(window, 0); //Toggle fullscreen 
+				}
 			}
 			// if (windowEvent.type == SDL_KEYDOWN && (windowEvent.key.keysym.mod & KMOD_SHIFT)) shiftKeyPressed = true;
 			// if (windowEvent.type == SDL_KEYUP && (windowEvent.key.keysym.mod & KMOD_SHIFT)) shiftKeyPressed = false;
@@ -289,7 +309,7 @@ int main(int argc, char *argv[]){
 			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = true;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = false;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_c){ //If "c" is pressed
-				scene->me->color = glm::vec3(rand01(),rand01(),rand01());
+				scene->me->SetColor(glm::vec3(rand01(),rand01(),rand01()));
 			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l) useFlashLight = !useFlashLight;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) spaceKeyPressed = true;
@@ -305,9 +325,9 @@ int main(int argc, char *argv[]){
 		if (reset){
 			delete scene;
 			delete lights;
-			Scene* scene = new Scene();
+			scene = new Scene();
 			scene->ReadMap(curMap.c_str());
-			camera->pos = scene->me->pos;
+			camera->pos = scene->me->GetPos();
 			sceneW = float((scene->nc+1)*scene->cx);
 			sceneH = float((scene->nr+1)*scene->cz);
 			far0 = (sceneW>sceneH)?sceneW:sceneH;
@@ -346,23 +366,25 @@ int main(int argc, char *argv[]){
 		} 
 		mouse_dragging = true;
 		} else {mouse_dragging = false;}		
-      
 		// Clear the screen to default color
 		glClearColor(.2f, 0.4f, 0.8f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 		glUseProgram(texturedShader);		
 		// printf("timePast=%f\n",timePast);
 		camera->Update(dt);
-		if (scene->Update(camera->pos,dt)){
-			scene->me->pos = camera->pos;
+		
+		if (scene->FirstPersonUpdate(camera->pos,dt)){
+			scene->me->SetPos(camera->pos);
 		} else {
-			scene->me->pos.y = 0; // in case of jumping
-			camera->pos = scene->me->pos;
+			glm::vec3 curPos = scene->me->GetPos();
+			curPos.y = 0; // in case of jumping
+			scene->me->SetPos(curPos);
+			camera->pos = scene->me->GetPos();
 		}
 		// camera->PrintState();
 
-		scene->me->rotRad = camera->hAngle;
+		scene->me->SetRotRad(camera->hAngle);
+		scene->ZomUpdate(dt);
 
 		float FoV, far;
 		glm::mat4 view;
@@ -386,27 +408,35 @@ int main(int argc, char *argv[]){
 
 		glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-		glm::mat4 proj = glm::perspective(FoV, screenWidth / (float) screenHeight, 0.5f, far); //FOV, aspect, near, far
+		glm::mat4 proj = glm::perspective(FoV, screenWidth / (float) screenHeight, 0.1f, far); //FOV, aspect, near, far
 		glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 		glBindVertexArray(vao);
 		if (topView){ //do not show ceiling in top view
 			// scene->me->show = false;
-			scene->objs[1]->show = false;
+			scene->objs[1]->SetVisibility(false);
 		}else{
 			// scene->me->show = true;
-			scene->objs[1]->show = true;
+			scene->objs[1]->SetVisibility(true);
 		}
 
 		for (auto const& obj : scene->objs) {
-			if (obj->show){
+			if (obj->IsVisible()){
 				glActiveTexture(GL_TEXTURE0);
-				glBindTexture(GL_TEXTURE_2D, textures[obj->texID]);
+				glBindTexture(GL_TEXTURE_2D, textures[obj->GetTexID()]);
 				glUniform1i(glGetUniformLocation(texturedShader, "tex"), 0);
-				renderObj(texturedShader,*obj,lights,nLights);
+				renderObj(texturedShader,obj,lights,nLights);
 			}
 		}
-		if (topView) renderObj(texturedShader,*scene->me,lights,nLights);
+		for (auto const& zom : scene->zoms) {
+			if (zom->IsVisible()){
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, textures[zom->GetTexID()]);
+				glUniform1i(glGetUniformLocation(texturedShader, "tex"), 0);
+				renderObj(texturedShader,zom,lights,nLights);
+			}
+		}
+		if (topView) renderObj(texturedShader,scene->me,lights,nLights);
 
 		SDL_GL_SwapWindow(window); //Double buffering
 		
@@ -424,9 +454,9 @@ int main(int argc, char *argv[]){
 	return 0;
 }
 
-void renderObj(int shaderProgram, Obj obj, float* lights, int nLights){
+void renderObj(int shaderProgram, Obj* obj, float* lights, int nLights){
 	GLint uniColor = glGetUniformLocation(shaderProgram, "inColor");
-	glUniform3fv(uniColor, 1, glm::value_ptr(obj.color));
+	glUniform3fv(uniColor, 1, glm::value_ptr(obj->GetColor()));
 	
 	GLint u_nLights = glGetUniformLocation(shaderProgram, "numLights");
 	glUniform1i(u_nLights, nLights);
@@ -451,18 +481,18 @@ void renderObj(int shaderProgram, Obj obj, float* lights, int nLights){
 
 	//Translate the model (matrix) left and back
 	glm::mat4 model = glm::mat4(1); //Load intentity
-	model = glm::translate(model,obj.pos);	
-	model = glm::scale(model,obj.scale);
-	model = glm::rotate(model,obj.rotRad,obj.rotAxis);
+	model = glm::translate(model,obj->GetPos());	
+	model = glm::scale(model,obj->GetScale());
+	model = glm::rotate(model,obj->GetRotRad(),obj->GetRotAxis());
 	
 	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 	//Set which texture to use (0 = wood texture ... bound to GL_TEXTURE0)
-	glUniform1i(uniTexID, obj.texID);
+	glUniform1i(uniTexID, obj->GetTexID());
 
   //Draw an instance of the model (at the position & orientation specified by the model matrix above)
-	glDrawArrays(GL_TRIANGLES, modelStartVert[obj.modelID], modelNumVerts[obj.modelID]); //(Primitive Type, Start Vertex, Num Verticies)
+	glDrawArrays(GL_TRIANGLES, modelStartVert[obj->GetModelID()], modelNumVerts[obj->GetModelID()]); //(Primitive Type, Start Vertex, Num Verticies)
 }
 
 // Create a NULL-terminated string by reading the provided file
@@ -636,7 +666,7 @@ float* CreateModel(int& numModels, int* modelStartVert, int* modelNumVerts, int&
 	for (int i = 0; i < numLines; i++){
 		modelFile >> model[i];
 	}
-	printf("Adding Model#%d, numlines = %d\n",numModels, numLines);
+	// printf("Adding Model#%d, numlines = %d\n",numModels, numLines);
 	modelStartVert[numModels] = totalNumVerts;
 	modelNumVerts[numModels] = numLines/8;
 	totalNumVerts += modelNumVerts[numModels];

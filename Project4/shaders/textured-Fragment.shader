@@ -22,7 +22,7 @@ uniform vec3 spotpos;
 const float a1 = 0.9; //spot light angle limits
 const float a2 = 0.85;
 
-const float ambient = .1;
+const float ambient = .2;
 void main() {
   vec3 color;
   if (texID == -1)
