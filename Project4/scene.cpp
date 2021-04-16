@@ -25,7 +25,7 @@ void Scene::ReadMap(const char* fileName){
     tmp = new Wall(0,3,glm::vec3((nc+1)*cx/2.0,0.5*cy,(nr+1)*cz/2.0),glm::vec3((nc+1)*cx,1,(nr+1)*cz));
     objs.emplace_back(tmp); obj_cnt++;
 
-    // tmp = new Wall(5,4,glm::vec3(cx*1.5,8,cz*1.5),glm::vec3(1,1,1));
+    // tmp = new Wall(5,4,glm::vec3(cx*1.5,8,cz*0.5),glm::vec3(1,1,1));
     // objs.emplace_back(tmp); obj_cnt++;
     //walls
     // for (int i=1; i<=nc; i++){
@@ -80,19 +80,19 @@ void Scene::ReadMap(const char* fileName){
                 case 'C':
                 case 'D':
                 case 'E':
-                    if (map[n-1]=='0'){
+                    if (map[n-1]=='W'){
+                        // tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
+                        // curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);      
+                        tmp = new Door(1,-1,curPos+glm::vec3(0,0,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
+                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);                        
+                    } else {
                         // tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
                         // curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
                         /*Door(int modelID_, int texID_, glm::vec3 pos_, glm::vec3 scale_, glm::vec3 color_, glm::vec3 end_pos_, glm::vec3 end_rotAxis_, float end_rotRad_) :
                             Obj(modelID_, texID_, pos_, scale_, color_), endStateValid(false), end_pos(glm::vec3(0,0,0)), end_rotAxis(glm::vec3(0,1,0)), end_rotRad(0) 
                             {d_pos = end_pos - pos; d_rad = end_rotRad - rotRad;}*/
                         tmp = new Door(1,-1,curPos+glm::vec3(0,0,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 1.57, colors[c-65],
-                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14);
-                    } else {
-                        // tmp = new Obj(1,-1,curPos+glm::vec3(0,-3.7,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
-                        // curPos+glm::vec3(float(cx/2.0),-3.7,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);      
-                        tmp = new Door(1,-1,curPos+glm::vec3(0,0,0),glm::vec3(cx*doorScale,2.2,cz*doorScale),glm::vec3(0,1,0), 0.0, colors[c-65],
-                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14/2);                  
+                        curPos+glm::vec3(float(cx/2.0),0,float(cz/2.0)), glm::vec3(0,1,0), 3.14);              
                     }                    
                     objs.emplace_back(tmp);
                     map_objIdx.emplace_back(obj_cnt);
@@ -136,8 +136,10 @@ void Scene::ReadMap(const char* fileName){
                     break;
             }
             n++;
+            // printf("n=%d, r=%d, c=%d, x=%.0f, z=%.0f, m=%c\n",n-1,curR,curC,curPos.x,curPos.z,c);
         }
     }
+    // assert(false);
 }
 
 bool Scene::GetCells(glm::vec3 p, float l, int* cells, int& nCells, int& side){
@@ -214,37 +216,56 @@ bool Scene::PointPointVisibilityTest(glm::vec3 p1, glm::vec3 p2){
         }
     }
     float xmin,xmax,zmin,zmax;
-    if (p1.z<p2.z){zmin=p1.z;zmax=p2.z;}
-    else {zmin=p2.z;zmax=p1.z;}
-    if (p1.x<p2.x){xmin=p1.x;xmax=p2.x;}
-    else {xmin=p2.x;xmax=p1.x;}
-    int last_c = start_c;
+    if (p1.z<p2.z){zmin=p1.z;xmin=p1.x;zmax=p2.z;xmax=p2.x;}
+    else {zmin=p2.z;xmin=p2.x;zmax=p1.z;xmax=p1.x;}
+    // if (p1.x<p2.x){xmin=p1.x;xmax=p2.x;}
+    // else {xmin=p2.x;xmax=p1.x;}
     for (int cur_r=start_r; cur_r<=end_r; cur_r++){
         for (int cur_c=start_c; cur_c<=end_c; cur_c++){
-            float cell_x_min = (float(cur_r)+0.5)*float(cz);
-            float cell_x_max = (float(cur_r)+1.5)*float(cz);
-            float cell_z_min = (float(cur_c)+0.5)*float(cx);
-            float cell_z_max = (float(cur_c)+1.5)*float(cx);
+            float a = 0;
+            float cell_x_min = (float(cur_c)-0.5+a)*float(cx);
+            float cell_x_max = (float(cur_c)+0.5+a)*float(cx);
+            float cell_z_min = (float(cur_r)-0.5+a)*float(cz);
+            float cell_z_max = (float(cur_r)+0.5+a)*float(cz);
+            int n = (nr-cur_r)*nc + nc-cur_c;
+            // printf("r=%d, c=%d, n=%d, m=%c\n",cur_r,cur_c,n,map[n]);
+            // printf("xmin=%.1f,xmax=%.1f,zmin=%.1f,zmax=%.1f\n",p1.x,p2.x,p1.z,p2.z);
+            // printf("xmin=%.1f,xmax=%.1f,zmin=%.1f,zmax=%.1f\n",xmin,xmax,zmin,zmax);
+            // printf("cell_x_min=%.1f,cell_x_max=%.1f,cell_z_min=%.1f,cell_z_max=%.1f\n",cell_x_min,cell_x_max,cell_z_min,cell_z_max);
             //((y2 - y1) * xcorner + (x1 - x2) * ycorner + (x2 * y1 - x1 * y2)) >= 0
             // bool corner1leftofline = (((zmax - zmin) * cell_x_min + (xmax - xmin) * cell_z_min  + (xmax * zmin - xmin * zmax)) >= 0);
             // bool corner2leftofline = (((zmax - zmin) * cell_x_min + (xmax - xmin) * cell_z_max  + (xmax * zmin - xmin * zmax)) >= 0);
             // bool corner3leftofline = (((zmax - zmin) * cell_x_max + (xmax - xmin) * cell_z_min  + (xmax * zmin - xmin * zmax)) >= 0);
             // bool corner4leftofline = (((zmax - zmin) * cell_x_max + (xmax - xmin) * cell_z_max  + (xmax * zmin - xmin * zmax)) >= 0);
-
+            // glm::vec2 p_corner=glm::vec2(cell_x_min,cell_z_min), p11 = glm::vec2(p1.x,p1.z), p12 = glm::vec2(p2.x,p2.z);
+            // glm::vec2 l1 = p_corner-p11, l2=p_corner-p12;         
+            // bool corner1leftofline = ((l1.x*l2.y-l1.y*l2.x) >=0);
+            // p_corner=glm::vec2(cell_x_min,cell_z_max);
+            // l1 = p_corner-p11, l2=p_corner-p12;    
+            // bool corner2leftofline = ((l1.x*l2.y-l1.y*l2.x) >=0);
+            //  p_corner=glm::vec2(cell_x_max,cell_z_min);
+            // l1 = p_corner-p11, l2=p_corner-p12;    
+            // bool corner3leftofline = ((l1.x*l2.y-l1.y*l2.x) >=0);
+            // p_corner=glm::vec2(cell_x_max,cell_z_max);
+            // l1 = p_corner-p11, l2=p_corner-p12;    
+            // bool corner4leftofline = ((l1.x*l2.y-l1.y*l2.x) >=0);
             bool corner1leftofline = (((cell_x_min - xmin) * (zmax -zmin) -(cell_z_min-zmin)*(xmax-xmin)) >= 0);
-            bool corner2leftofline = (((cell_x_max - xmin) * (zmax -zmin) -(cell_z_max-zmin)*(xmax-xmin)) >= 0);
-            bool corner3leftofline = (((cell_x_min - xmin) * (zmax -zmin) -(cell_z_max-zmin)*(xmax-xmin)) >= 0);
-            bool corner4leftofline = (((cell_x_max - xmin) * (zmax -zmin) -(cell_z_min-zmin)*(xmax-xmin)) >= 0);
+            bool corner2leftofline = (((cell_x_max - xmin) * (zmax -zmin) -(cell_z_max-zmin)*(xmax-xmin)) >=  0);
+            bool corner3leftofline = (((cell_x_min - xmin) * (zmax -zmin) -(cell_z_max-zmin)*(xmax-xmin)) >=  0);
+            bool corner4leftofline = (((cell_x_max - xmin) * (zmax -zmin) -(cell_z_min-zmin)*(xmax-xmin)) >=  0);
+            // printf("1=%d, 2=%d, 3=%d, 4=%d\n",corner1leftofline,corner2leftofline,corner3leftofline,corner4leftofline);
+            // printf("------------------------\n");
             if ((corner1leftofline && corner4leftofline && corner3leftofline && corner2leftofline) ||
                 ((!corner1leftofline) && (!corner4leftofline) && (!corner3leftofline) && (!corner2leftofline))) 
                 continue;
-            else {
-            int n = (nr-cur_r)*nc + nc-cur_c;
+            else {            
             // printf("cur_r=%d,cur_c=%d,n=%d\n",cur_r,cur_c,n);
             if (IsDoor(n) || IsWall(n)) return false;
             }
+            
         }        
     }
+    // assert(false);
     return true;
 }
 
@@ -262,9 +283,17 @@ bool Scene::FirstPersonUpdate(glm::vec3 p, float dt){ //only update scene if p i
         if (IsDoor(n)){
             //check if I have the right key
             char k = map[n] + 32;
-            if (me->HasKey(k)){                
+            if (me->HasKey(k)){   
                 //open the door and update the map to make it free to pass
+                //check which direction I am approaching the door
+                // glm::vec3 me_pos = me->GetPos();
+                // int r1 = (round(me_pos.z/cz)<1)?1:round(me_pos.z/cz), c1 = (round(me_pos.x/cx)<1)?1:round(me_pos.x/cx);
+                // int me_n = (nr-r1)*nc + nc-c1;
                 int obj_idx = map_objIdx[n];
+                // if (me_n < n) { //approaching from top or left
+                //     Door* temp_door = objs[obj_idx];
+                // }
+                
                 if (!objs[obj_idx]->Animate(dt)) map[n] = '0'; //set map grid to 0 if animation is done
                 // objs[obj_idx]->rotRad = objs[obj_idx]->end_rotRad;
                 // objs[obj_idx]->pos = objs[obj_idx]->end_pos;
@@ -316,6 +345,7 @@ void Scene::ZomUpdate(float dt){
         //Check if I can see the first person
         if (PointPointVisibilityTest(zom_p,me_p)){
             zom->SetDir(glm::normalize(glm::vec3(me_p.x-zom_p.x,0,me_p.z-zom_p.z)));
+            // return;
         }
         // printf("visible=%d\n",PointPointVisibilityTest(zom_p,me_p));
         glm::vec3 new_p = zom->GetPos() + zom->GetDir() * (zom->GetVel()*dt*1);
@@ -324,22 +354,22 @@ void Scene::ZomUpdate(float dt){
         int side = 0;
         if (!GetCells(new_p,0.5,cells,nCells,side)){
             // zom->SetDir(zom->GetDir()+glm::vec3(0.1,0.55,0.1));
-            glm::vec3 new_dir = (side==0)? zom->GetDir() *glm::vec3(1,1,-1) : zom->GetDir() *glm::vec3(-1,1,1);
-            new_dir = glm::normalize(new_dir);
-            new_p = zom->GetPos() + new_dir * float(0.1); //(zom->GetVel()*dt*2);
+            new_p = zom->GetPos() - zom->GetDir() * float(0.1); //(zom->GetVel()*dt*2);
             zom->SetPos(new_p);
+            glm::vec3 new_dir = (side==0)? zom->GetDir() *glm::vec3(1,1,-1) : zom->GetDir() *glm::vec3(-1,1,1);
+            new_dir = glm::normalize(new_dir);            
             zom->SetDir(new_dir);
-            return;
         } else{
             for (int i=0; i<nCells; i++){
                 int n = cells[i]; //map index
                 if (IsDoor(n) || IsWall(n) || IsGoal(n)){
+                    new_p = zom->GetPos() - zom->GetDir() * float(0.1); //(zom->GetVel()*dt*2);
+                    zom->SetPos(new_p);
                     glm::vec3 new_dir = (side==0)? zom->GetDir() *glm::vec3(1,1,-1) : zom->GetDir() *glm::vec3(-1,1,1);
                     new_dir = glm::normalize(new_dir);
-                    new_p = zom->GetPos() + new_dir * float(0.1); //(zom->GetVel()*dt*2);
-                    zom->SetPos(new_p);
+                    // new_p = zom->GetPos() + new_dir * float(0.1); //(zom->GetVel()*dt*2);
+                    // zom->SetPos(new_p);
                     zom->SetDir(new_dir);
-                    return;                  
                 }
             }
         }

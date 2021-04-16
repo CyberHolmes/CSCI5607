@@ -3,7 +3,7 @@
 in vec3 Color;
 in vec3 vertNormal;
 in vec3 pos;
-in vec3 lightPos;
+in vec3 lightDir;
 in vec2 texcoord;
 in mat4 view1;
 in mat4 model1;
@@ -16,6 +16,7 @@ uniform int texID;
 uniform int numLights;
 uniform vec3 lights[20]; //no more than 20 lights are supported
 uniform int enable_SpotLight;
+uniform int enable_dirLight;
 uniform vec3 spotdir;
 uniform vec3 spotpos;
 
@@ -66,6 +67,15 @@ void main() {
       // oColor = specC;
       // oColor = vec3(attenuation,0,0);
     }//else{
+  }
+  if (enable_dirLight>0){
+    vec3 diffuseC = color*max(dot(-lightDir,normal),0.0);
+    vec3 viewDir = normalize(-pos); //We know the eye is at (0,0)! (Do you know why?)
+    vec3 reflectDir = reflect(viewDir,normal);
+    float spec = max(dot(reflectDir,lightDir),0.0);
+    if (dot(-lightDir,normal) <= 0.0) spec = 0; //No highlight if we are not facing the light
+    vec3 specC = .8*vec3(1.0,1.0,1.0)*pow(spec,4);
+    oColor += 0.4*(diffuseC+specC);
   }
   oColor = oColor + color*ambient;
   outColor = vec4(oColor,1);

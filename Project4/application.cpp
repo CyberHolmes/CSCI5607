@@ -16,10 +16,13 @@ const char* INSTRUCTIONS =
 "***************\n"
 "This is a treasure hunt game.\n"
 "\n"
-"Up/down (w/s) - Moves player forward and backward.\n"
-"left/right (a/d) - Turn player view to left and right.\n"
+"Up/down (also w/s) - Moves player forward and backward.\n"
+"left/right - Turn player view to left and right.\n"
+"a/d - Moves player left and right.\n"
+"shift key - accelorate moving turning speed.\n"
 "Moving mouse with left button down - Change player's view angle.\n"
 "l - Turn on/off the flash light.\n"
+"o - Turn on/off directional light.\n"
 "t - Toggles between bird's eye view and first person view.\n"
 "space - Jump.\n"
 "c - Changes first person's color.\n"
@@ -64,7 +67,7 @@ float timePast = 0;
 int numTextures = 0;
 #define MAX_TEXTURES 100 // no more than 100 textures for now
 #define MAX_MODELS 100 // no more than 100 textures for now
-#define MAX_LEVEL 4
+#define MAX_LEVEL 8
 #define NUM_TEX_FILES 5
 #define NUM_MODEL_FILES 9
 GLuint textures[MAX_TEXTURES] = {0}; 
@@ -75,7 +78,8 @@ const char* modelFiles[NUM_MODEL_FILES] = {"models/cube.txt","models/Mydoor1.txt
 	,"models/Chest_Closed.txt","models/Key4.txt","models/sphere.txt"
 	,"models/MyKey.txt","models/Sword.txt","models/Skeleton.txt"
 };
-const char* sceneFiles[MAX_LEVEL] = {"maps/no_doors_l0.txt", "maps/map1.txt", "maps/door_w_key_l2.txt", "maps/map2.txt"};
+const char* sceneFiles[MAX_LEVEL] = {"maps/no_doors_l0.txt", "maps/no_doors_l1.txt", "maps/doors_l0.txt", "maps/doors_l2.txt",
+		"maps/doors_l3.txt", "maps/zombie_l0.txt", "maps/zombie_l1.txt", "maps/zombie_l2.txt"};
 
 //global vars
 int curlevel = 0;
@@ -86,6 +90,7 @@ int totalNumVerts = 0;
 int modelStartVert[MAX_MODELS] = {0};
 int modelNumVerts[MAX_MODELS] = {0};
 bool useFlashLight = false; //0-disable, >0-use
+bool enableDir = false; //0-disable, >0-use
 
 bool DEBUG_ON = false;
 GLuint InitShader(const char* vShaderFileName, const char* fShaderFileName);
@@ -213,7 +218,7 @@ int main(int argc, char *argv[]){
 	camera->pos = scene->me->GetPos();
 	float sceneW = float((scene->nc+1)*scene->cx);
 	float sceneH = float((scene->nr+1)*scene->cz);
-	float far0 = (sceneW>sceneH)?sceneW:sceneH;
+	float far0 = (sceneW>sceneH)?1.42*sceneW:1.42*sceneH;
 
 	int nLights = scene->lights.size();
 	// printf("nLights=%d\n",nLights);
@@ -235,9 +240,10 @@ int main(int argc, char *argv[]){
 	bool leftKeyPressed = false;
 	bool rightKeyPressed = false;
 	bool spaceKeyPressed = false;
+	bool aKeyPressed = false;
+	bool dKeyPressed = false;
 	bool reset = false;
 	bool shiftKeyPressed = false;
-
 	// glm::vec3 pos0 = camera->pos;
 	
 	while (!quit){
@@ -304,14 +310,15 @@ int main(int argc, char *argv[]){
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) upKeyPressed = false;
 			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_s) dnKeyPressed = true;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) dnKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_a) leftKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) leftKeyPressed = false;
-			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = true;
-			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) rightKeyPressed = false;
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_a) aKeyPressed = true;
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) aKeyPressed = false;
+			if (windowEvent.type == SDL_KEYDOWN && windowEvent.key.keysym.sym == SDLK_d) dKeyPressed = true;
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) dKeyPressed = false;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_c){ //If "c" is pressed
 				scene->me->SetColor(glm::vec3(rand01(),rand01(),rand01()));
 			}
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l) useFlashLight = !useFlashLight;
+			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) enableDir = !enableDir;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) spaceKeyPressed = true;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_r) reset = true;
 			if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_t) topView = !topView;
@@ -330,7 +337,7 @@ int main(int argc, char *argv[]){
 			camera->pos = scene->me->GetPos();
 			sceneW = float((scene->nc+1)*scene->cx);
 			sceneH = float((scene->nr+1)*scene->cz);
-			far0 = (sceneW>sceneH)?sceneW:sceneH;
+			far0 = (sceneW>sceneH)?1.42*sceneW:1.42*sceneH;
 
 			nLights = scene->lights.size();
 			lights = new float[nLights*3];
@@ -344,10 +351,14 @@ int main(int argc, char *argv[]){
 			mouse_dragging = false;
 			topView = false;
 			reset = false;
+			enableDir = false;
+			useFlashLight = false;
 		}
 		if (camera->pos.y>=0.001) spaceKeyPressed = false;
 		if (upKeyPressed) posFwd = (shiftKeyPressed)? 2 :1;
 		if (dnKeyPressed) negFwd = (shiftKeyPressed)? -2 :-1;
+		if (aKeyPressed) negRight = (shiftKeyPressed)? -2 :-1;
+		if (dKeyPressed) posRight = (shiftKeyPressed)? 2 :1;
 		if (leftKeyPressed) hPosTurn = (shiftKeyPressed)? 2 :1;
 		if (rightKeyPressed) hNegTurn = (shiftKeyPressed)? -2 :-1;
 		if (spaceKeyPressed) {upforce = (shiftKeyPressed)? 250 :180; fwdspeed = 2*(posFwd+negFwd); spaceKeyPressed = false;}
@@ -476,6 +487,9 @@ void renderObj(int shaderProgram, Obj* obj, float* lights, int nLights){
 	} else {
 		glUniform1i(u_usespot,0);
 	}
+	GLint u_enableDir = glGetUniformLocation(shaderProgram, "enable_dirLight");
+	if (enableDir) glUniform1i(u_enableDir,1);
+	else glUniform1i(u_enableDir,0);
       
   	GLint uniTexID = glGetUniformLocation(shaderProgram, "texID");
 

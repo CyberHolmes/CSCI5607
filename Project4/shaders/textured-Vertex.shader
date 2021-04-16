@@ -4,14 +4,14 @@ in vec3 position;
 //in vec3 inColor;
 
 //const vec3 inColor = vec3(0.f,0.7f,0.f);
-// const vec3 inLightPos = normalize(vec3(10,8,5));
+const vec3 inLightDir = normalize(vec3(-1,-1,-1));
 in vec3 inNormal;
 in vec2 inTexcoord;
 
 out vec3 Color;
 out vec3 vertNormal;
 out vec3 pos;
-out vec3 lightPos;
+out vec3 lightDir;
 out vec2 texcoord;
 out mat4 view1;
 out mat4 model1;
@@ -25,7 +25,7 @@ void main() {
    Color = inColor;
    gl_Position = proj * view * model * vec4(position,1.0);
    pos = (view * model * vec4(position,1.0)).xyz;
-   // lightPos = (view * vec4(inLightPos,0.0)).xyz; //It's a vector!
+   lightDir = (view * vec4(inLightDir,0.0)).xyz; //It's a vector!
    // lightPos = inLightPos;
    vec4 norm4 = transpose(inverse(view*model)) * vec4(inNormal,0.0);
    vertNormal = normalize(norm4.xyz);
