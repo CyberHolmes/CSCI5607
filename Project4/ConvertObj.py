@@ -3,8 +3,8 @@ vt = []
 vn = []
 vp = []
 face = []
-# fileName = input('Enter file name: ')
-fileName = 'models/ZombieSmooth.obj'
+fileName = input('Enter file name: ')
+# fileName = 'models/ZombieSmooth.obj'
 with open(fileName) as f:
     for line in f:
         temp = line.strip().split(' ')
