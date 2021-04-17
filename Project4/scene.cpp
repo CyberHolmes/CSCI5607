@@ -126,7 +126,8 @@ void Scene::ReadMap(const char* fileName){
                     map_objIdx.emplace_back(-1);
                     break;
                 case 'Z': {//start position
-                    Zombie* tmp2 = new Zombie(8,-1,curPos+glm::vec3(0,-3.5,0),glm::vec3(0.5,0.5,0.5),glm::vec3(0,1,0),3.14*1.5,glm::vec3(0.7,0.7,0.7),1);
+                    Zombie* tmp2 = new Zombie(8,-1,curPos+glm::vec3(0,-3.5,0),glm::vec3(0.5,0.5,0.5),glm::vec3(0,1,0),3.14*1.5,
+                        glm::vec3(rand()/(float)RAND_MAX,float(rand()/(float)RAND_MAX),float(rand()/(float)RAND_MAX)),1);
                     zoms.emplace_back(tmp2);
                     map_objIdx.emplace_back(-1);
                     break;
