@@ -57,13 +57,13 @@ void main() {
       float dist = distance(pos, spotpos1);
       float attenuation = 4.0/dist;//(dist*dist);
       vec3 diffuseC = color*max(dot(-spotdir1,normal),0.0);
-      // vec3 viewDir = normalize(-pos); //We know the eye is at (0,0)!
-      // vec3 reflectDir = reflect(viewDir,normal);
-      // float spec = max(dot(reflectDir,-spotdir1),0.0);
-      // if (dot(spotdir1,normal) <= 0.0) spec = 0;
-      // vec3 specC = color*pow(spec,4);
-      // oColor = oColor + (diffuseC+specC) * attenuation*term;
-      oColor += diffuseC* attenuation*term;//+color*ambient;
+      vec3 viewDir = normalize(-pos); //We know the eye is at (0,0)!
+      vec3 reflectDir = reflect(viewDir,normal);
+      float spec = max(dot(reflectDir,spotdir1),0.0);
+      // if (dot(spotdir1,normal) <= 0.0001) spec = 0;
+      vec3 specC = color*pow(spec,4);
+      oColor = oColor + (diffuseC+specC) * attenuation*term;
+      // oColor += diffuseC* attenuation*term;//+color*ambient;
       // oColor = specC;
       // oColor = vec3(attenuation,0,0);
     }//else{
