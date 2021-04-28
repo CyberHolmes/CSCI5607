@@ -82,13 +82,21 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         int numBounces = hi.rayDepth-1;
         Color c_ind = Color(0,0,0);
         for (int i=0; i<numPaths; i++){
-            float th =drand48()*M_PI;
+            float th =drand48()*M_PI;            
             rotMat = glm::rotate(rotMat,th,norm);
+            // printf("rotM=%.2f,%.2f,%.2f\n",rotMat[0].x,rotMat[0].y,rotMat[0].z);
             glm::vec3 temp = glm::vec3(rotMat*glm::vec4(norm,1.0));
-            vec3 new_dir = vec3(new_dir.x,new_dir.y,new_dir.z).normalized();
+
+            vec3 new_dir = vec3(temp.x,temp.y,temp.z).normalized();
             Ray ray_indirect = Ray(hi.hitPos, new_dir, numBounces);
             c_ind = c_ind + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
+            // printf("th=%f,r=%.2f,%.2f,%.2f, c=%.2f,%.2f,%.2f\n",th,new_dir.x,new_dir.y,new_dir.z,c_ind.r,c_ind.g,c_ind.b);
         }
+        // c_ind = Color(1.0,1.0,1.0);
+        // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
+        // c_ind = c_ind*(1.0/float(numPaths));
+        // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
+        // assert(false);
         c_out = c_out + c_ind*(1.0/float(numPaths));
 
         //Refraction
