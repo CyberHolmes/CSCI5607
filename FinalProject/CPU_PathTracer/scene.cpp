@@ -65,42 +65,33 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     }
     if (hi.rayDepth>0){
         Color c_reflect = Color(0,0,0);
+        int numReflectRays = 0;
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
         //Reflection
         vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
         Ray ray_reflect = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
         // c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
         c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        numReflectRays ++;
 
-        //Indirect lighting
-        // float rotMat[3][3] =
-        //     {{0.0, -hi.hitNorm.z, hi.hitNorm.y}, 
-        //     {hi.hitNorm.z, 0.0, -hi.hitNorm.x},
-        //     {-hi.hitNorm.y, -hi.hitNorm.x, 0.0}
-        // };
-        
-        int numPaths = 5;
-        int numBounces = hi.rayDepth-1;
-        
-        for (int i=0; i<numPaths; i++){
-            float th =drand48()*M_PI * 2.0;
-            float phi = acos(1-2*drand48());
-            float x = sin(phi)*cos(th);
-            float y = sin(phi)*sin(th);
-            float z = cos(phi);
-            vec3 new_dir = vec3(x,y,z);
-            if (dot(new_dir,hi.hitNorm)<0) new_dir = -new_dir;
-            Ray ray_indirect = Ray(hi.hitPos, new_dir, numBounces);
-            c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
-            // printf("norm=%.2f,%.2f,%.2f\n",norm.x,norm.y, norm.z);
-            // printf("th=%f,r=%.4f,%.4f,%.4f, c=%.2f,%.2f,%.2f\n",th,new_dir.x,new_dir.y,new_dir.z,c_reflect.r,c_reflect.g,c_reflect.b);
+        //Indirect rays
+        if (hi.rayDepth>numBounces){              
+            for (int i=0; i<numPaths; i++){
+                float th =drand48()*M_PI * 2.0;
+                float phi = acos(1-2*drand48());
+                float x = sin(phi)*cos(th);
+                float y = sin(phi)*sin(th);
+                float z = cos(phi);
+                vec3 new_dir = vec3(x,y,z);
+                if (dot(new_dir,hi.hitNorm)<0) new_dir = -new_dir;
+                Ray ray_indirect = Ray(hi.hitPos, new_dir, numBounces);
+                c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
+                // printf("norm=%.2f,%.2f,%.2f\n",norm.x,norm.y, norm.z);
+                // printf("th=%f,r=%.4f,%.4f,%.4f, c=%.2f,%.2f,%.2f\n",th,new_dir.x,new_dir.y,new_dir.z,c_reflect.r,c_reflect.g,c_reflect.b);
+                numReflectRays ++;
+            }
         }
-        // c_ind = Color(1.0,1.0,1.0);
-        // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
-        // c_ind = c_ind*(1.0/float(numPaths));
-        // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
-        // assert(false);
-        c_out = c_out + c_reflect*(1.0/(float(numPaths+1)));
+        c_out = c_out + c_reflect*(1.0/(float(numReflectRays)));
 
         //Refraction
         float eta = (ctheta<0)?1.0/hi.m.ior:hi.m.ior;

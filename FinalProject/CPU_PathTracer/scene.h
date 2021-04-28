@@ -19,9 +19,11 @@ class Scene{
     int numLights;
     std::vector<Obj*> objects;
     std::vector<Light*> lights;
+    int numPaths;
+    int numBounces;
 
 public:
-    Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0){
+    Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0),numPaths(0), numBounces(0){
         objects.get_allocator().allocate(1000);
         lights.get_allocator().allocate(20);
     };
@@ -41,6 +43,10 @@ public:
     int GetNumLights();
     Color GetAmbientLight();
     Color GetBackground();
+    int GetNumPaths() {return numPaths;};
+    int GetNumBounces() {return numBounces;};
+    void SetNumPaths(int np) {numPaths=np;}
+    void SetNumBounces(int nb) {numBounces=nb;}
     void SetBackground(Color);
     void SetAmbientlight(Color);    
     std::vector<Obj*> GetObjects() {return objects;}

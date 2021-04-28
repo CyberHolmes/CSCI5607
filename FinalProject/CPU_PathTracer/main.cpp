@@ -135,7 +135,17 @@ int main(int argc, char *argv[]){
             CheckOption(*argv, argc, 2);
             max_depth = atoi(argv[1]);
             argv += 2, argc -= 2;
-         } else {
+         } else if (!strcmp(*argv, "-numPaths"))
+         {
+            CheckOption(*argv, argc, 2);
+            scene->SetNumPaths (atoi(argv[1]));
+            argv += 2, argc -= 2;
+         } else if (!strcmp(*argv, "-numBounces"))
+         {
+            CheckOption(*argv, argc, 2);
+            scene->SetNumBounces (atoi(argv[1]));
+            argv += 2, argc -= 2;
+         }  else {
 				fprintf(stderr, "ray: invalid option: %s\n", *argv);
 				ShowUsage();
 			}
@@ -144,7 +154,7 @@ int main(int argc, char *argv[]){
 			ShowUsage();
 		}
    }
-   printf("sample size = %d, number of threads = %d\n",sample_size,numThreads);
+   
    vertexList.reserve(500);
    normalList.reserve(500);
    materialList.reserve(50);
@@ -155,8 +165,11 @@ int main(int argc, char *argv[]){
    //Parse Scene File
    parseSceneFile(secenFileName, scene, camera);
    auto t_end = std::chrono::high_resolution_clock::now();
+   //if numBounces is not less than ray depth, increase ray depth
+   max_depth = (max_depth>scene->GetNumBounces())? max_depth : scene->GetNumBounces()+1;
    printf("Parsing file took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-
+   printf("sample size = %d, number of threads = %d, ray depth = %d, numPaths = %d, numBounces = %d\n",
+      sample_size,numThreads, max_depth, scene->GetNumPaths(), scene->GetNumBounces());
    t_start = std::chrono::high_resolution_clock::now();
    std::vector<Obj*> objList = scene->GetObjects();
    vec3 minV = vec3(MAX_T,MAX_T,MAX_T), maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
