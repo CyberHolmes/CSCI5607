@@ -130,6 +130,11 @@ int main(int argc, char *argv[]){
             CheckOption(*argv, argc, 2);
             numThreads = atoi(argv[1]);
             argv += 2, argc -= 2;
+         } else if (!strcmp(*argv, "-depth"))
+         {
+            CheckOption(*argv, argc, 2);
+            max_depth = atoi(argv[1]);
+            argv += 2, argc -= 2;
          } else {
 				fprintf(stderr, "ray: invalid option: %s\n", *argv);
 				ShowUsage();
@@ -193,7 +198,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	
 	//Create a window (offsetx, offsety, width, height, flags)
-	SDL_Window* window = SDL_CreateWindow("Hailin's Project 3", 100, 100, img_width, img_height, SDL_WINDOW_OPENGL);
+	SDL_Window* window = SDL_CreateWindow("CPU Path Tracer", 100, 100, img_width, img_height, SDL_WINDOW_OPENGL);
 	
 	//The above window cannot be resized which makes some code slightly easier.
 	//Below show how to make a full screen window or allow resizing

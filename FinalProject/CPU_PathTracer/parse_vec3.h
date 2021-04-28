@@ -27,7 +27,7 @@ extern std::vector<Material> materialList;
 extern Camera* camera0;
 std::string imgName = "raytraced.bmp";
 
-int max_depth = 5;
+int max_depth = 3;
 
 void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
   FILE *fp;
