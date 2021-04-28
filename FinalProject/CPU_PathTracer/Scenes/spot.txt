@@ -1,0 +1,9 @@
+camera_pos: 0 10 0
+camera_fwd: 0 1 0
+camera_up: 0 0 1
+#matte white
+material: 1 1 1 1 1 1 0 0 0 0 0 0 0 0
+sphere: 0 -50 0 50
+ambient_light: .1 .1 .1
+output_image: green_spot.png
+spot_light: 0 15 0 5 5 5 -1 -2 -1 30 60

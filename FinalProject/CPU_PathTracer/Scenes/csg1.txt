@@ -1,0 +1,53 @@
+#Simple csg: Scene
+#camera_pos: -6 2 -8
+#-6 2 -4
+#camera_fwd: -.77 0 -.84
+#-.77 0 -.64
+#camera_up:  0 1 0
+camera_fov_ha: 35
+output_image: ./out/csg1.png
+
+camera_pos: -6.381256 6.140974 -5.559193
+camera_fwd: -0.675725 0.577433 -0.458222
+camera_up: 0.425329 0.813109 0.397429
+
+#ground plane:
+material: .75 .75 .75 .75 .75 .75 .3 .3 .3 32 .2 .2 .2 1.5
+plane: 0 0 0 0 -1 0
+
+#Union of a box and a sphere
+CSG: 0
+#red box:
+material: 1 0 0 1 0 0 .3 .3 .3 32 .2 .2 .2 1.5
+box: -3 1.5 0 1.1
+#green sphere:
+#material: 0 1 0 0 1 0 .3 .3 .3 32 .2 .2 .2 1.5 
+#0 0 1 0 0 0 16 0 0 0 1.0
+sphere: -3.5 1.25 0 1
+
+#intersection of a box and a sphere
+CSG: 1
+#red box:
+material: 1 0 0 1 0 0 .3 .3 .3 32 .2 .2 .2 1.5
+box: 0 1.5 0 1.1
+#green sphere:
+material: 0 1 0 0 0 1 0 0 0 16 0 0 0 1.0
+sphere: 0.5 1.25 0 1
+
+#difference of a box and a sphere
+CSG: 2
+material: 0 1 0 0 0 1 0 0 0 16 0 0 0 1.0
+box: 3.5 1.5 -0.5 2
+material: 1 0 0 1 0 0 .3 .3 .3 32 .2 .2 .2 1.5
+sphere: 2.5 1.7 0 1.2
+
+
+#white overhead light
+point_light: 18 18 18 0 5 0
+#directional_light: 0.5 0.5 0.5 0 -5 0
+#spot_light: 5 5 5 0 4 0 0 -1 0 45 45
+ambient_light: .25 .25 .25
+background: .05 .05 .05
+
+max_depth: 2
+sample_size: 5
