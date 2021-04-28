@@ -64,11 +64,13 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         c_out = c_out + l->Shading(hi);        
     }
     if (hi.rayDepth>0){
+        Color c_reflect = Color(0,0,0);
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
         //Reflection
         vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
         Ray ray_reflect = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-        c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        // c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
 
         //Indirect lighting
         // float rotMat[3][3] =
@@ -78,9 +80,9 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         // };
         glm::mat4 rotMat(1);
         glm::vec3 norm = glm::vec3(hi.hitNorm.x,hi.hitNorm.y,hi.hitNorm.z);
-        int numPaths = 5;
+        int numPaths = 10;
         int numBounces = hi.rayDepth-1;
-        Color c_ind = Color(0,0,0);
+        
         for (int i=0; i<numPaths; i++){
             float th =drand48()*M_PI;            
             rotMat = glm::rotate(rotMat,th,norm);
@@ -89,7 +91,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
 
             vec3 new_dir = vec3(temp.x,temp.y,temp.z).normalized();
             Ray ray_indirect = Ray(hi.hitPos, new_dir, numBounces);
-            c_ind = c_ind + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
+            c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
             // printf("th=%f,r=%.2f,%.2f,%.2f, c=%.2f,%.2f,%.2f\n",th,new_dir.x,new_dir.y,new_dir.z,c_ind.r,c_ind.g,c_ind.b);
         }
         // c_ind = Color(1.0,1.0,1.0);
@@ -97,7 +99,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         // c_ind = c_ind*(1.0/float(numPaths));
         // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
         // assert(false);
-        c_out = c_out + c_ind*(1.0/float(numPaths));
+        c_out = c_out + c_reflect*(1.0/(float(numPaths+1)));
 
         //Refraction
         float eta = (ctheta<0)?1.0/hi.m.ior:hi.m.ior;
