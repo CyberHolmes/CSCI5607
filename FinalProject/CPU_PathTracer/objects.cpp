@@ -1,5 +1,4 @@
 #include "objects.h"
-#include "glm/glm.hpp"
 
 vec3 Obj::GetPos(){
     return pos;
@@ -436,32 +435,34 @@ bool Triangle::Hit(Ray ray, HitInfo& hi){
             vec3 edge2 = vertexList[vertexP[1]] - vertexList[vertexP[0]];
             vec3 uv1 = uvList[uvP[2]] - uvList[uvP[0]];
             vec3 uv2 = uvList[uvP[1]] - uvList[uvP[0]];
-            glm::vec3 tangent, bitangent, normal;
+            vec3 tangent, bitangent, normal;
             float f = 1.0f / (uv1.x * uv2.y - uv2.x * uv1.y);
 
             tangent.x = f * (uv2.y * edge1.x - uv1.y * edge2.x);
             tangent.y = f * (uv2.y * edge1.y - uv1.y * edge2.y);
             tangent.z = f * (uv2.y * edge1.z - uv1.y * edge2.z);
-            tangent = glm::normalize(tangent);
+            tangent = (tangent).normalized();
 
             normal.x = hi.hitNorm.x;
             normal.y = hi.hitNorm.y;
             normal.z = hi.hitNorm.z;
-            normal = glm::normalize(normal);
+            normal = (normal).normalized();
 
-            bitangent = glm::cross(normal, tangent);
+            bitangent = cross(normal, tangent).normalized();
 
-            glm::mat3 tbn(tangent, bitangent, normal);
             // get the color (normal) in the image
             Color normal_in_rgb = textureList[normal_map_idx].Sample(hi.tex_coord.x, hi.tex_coord.y);
             // convert the color into a vector
-            glm::vec3 norm_in_map;
+            vec3 norm_in_map;
             norm_in_map.x = 2 * normal_in_rgb.r - 1.0;
             norm_in_map.y = 2 * normal_in_rgb.g - 1.0;
             norm_in_map.z = 2 * normal_in_rgb.b - 1.0;
             // bring the normal into the triangle's basis
-            glm::vec3 triangle_pt_normal = tbn * norm_in_map;
-            hi.hitNorm = vec3(triangle_pt_normal.x, triangle_pt_normal.y, triangle_pt_normal.z);
+            vec3 triangle_pt_normal;
+            triangle_pt_normal.x = dot(norm_in_map, vec3(tangent.x, bitangent.x, normal.x));
+            triangle_pt_normal.y = dot(norm_in_map, vec3(tangent.y, bitangent.y, normal.y));
+            triangle_pt_normal.z = dot(norm_in_map, vec3(tangent.z, bitangent.z, normal.z));
+            hi.hitNorm = triangle_pt_normal;
         }
         return true;    
     }

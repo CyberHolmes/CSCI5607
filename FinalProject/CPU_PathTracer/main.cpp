@@ -43,9 +43,6 @@ using namespace std;
 #include <typeinfo>
 
 static void CheckOption(char *option, int argc, int minargc);
-float rand_n1();
-int log2_asm(int x);
-void UpdateImage(Image* image, BoundingBox* BB, int numThreads);
 void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
 void RerenderImage(Image* image, BoundingBox* BB, int numThreads);
 static void ShowUsage(void);
@@ -104,8 +101,9 @@ const GLchar* fragmentSource =
    "}";
    
 bool fullscreen = false;
-
+int numPaths = 20;
 float mouse_dragging = false;
+bool pathTrace = false; //default is ray trace
 int main(int argc, char *argv[]){
    int sample_size = 1; //set default sample_size, may be overwritten by command input
    int numThreads = 8; //default number of threads, may be overwritten by command input
@@ -121,6 +119,10 @@ int main(int argc, char *argv[]){
    argv += 1, argc -= 1;
    std::string secenFileName = argv[0];
    argv += 1, argc -= 1;
+
+   //Parse Scene File
+   parseSceneFile(secenFileName, scene, camera);
+
    while (argc>0){
       if (**argv == '-'){
          if (!strcmp(*argv, "-samplesize"))
@@ -137,6 +139,20 @@ int main(int argc, char *argv[]){
             CheckOption(*argv, argc, 2);
             numThreads = atoi(argv[1]);
             argv += 2, argc -= 2;
+         } else if (!strcmp(*argv, "-depth"))
+         {
+            CheckOption(*argv, argc, 2);
+            max_depth = atoi(argv[1]);
+            argv += 2, argc -= 2;
+         } else if (!strcmp(*argv, "-numpaths"))
+         {
+            CheckOption(*argv, argc, 2);
+            numPaths = atoi(argv[1]);
+            argv += 2, argc -= 2;
+         } else if (!strcmp(*argv, "-pathtrace"))
+         {
+            pathTrace = true;
+            argv += 1, argc -= 1;
          } else {
 				fprintf(stderr, "ray: invalid option: %s\n", *argv);
 				ShowUsage();
@@ -146,20 +162,15 @@ int main(int argc, char *argv[]){
 			ShowUsage();
 		}
    }
-   printf("sample size = %d, number of threads = %d\n",sample_size,numThreads);
+   
    vertexList.reserve(500);
    normalList.reserve(500);
    materialList.reserve(50);
-   //for live pixel update: controls how many pixels are updated at once
-   int step = (img_width>img_height)?img_width/25 : img_height/25; 
+
+   printf("sample size = %d, number of threads = %d, ray depth = %d, numPaths = %d\n",
+      sample_size,numThreads, max_depth, numPaths);
    
    auto t_start = std::chrono::high_resolution_clock::now();
-   //Parse Scene File
-   parseSceneFile(secenFileName, scene, camera);
-   auto t_end = std::chrono::high_resolution_clock::now();
-   printf("Parsing file took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-
-   t_start = std::chrono::high_resolution_clock::now();
    std::vector<Obj*> objList = scene->GetObjects();
    vec3 minV = vec3(MAX_T,MAX_T,MAX_T), maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
    // printf("number objects = %ld\n",objList.size());
@@ -175,12 +186,11 @@ int main(int argc, char *argv[]){
       maxV.z = (maxV.z<curMaxV.z)?curMaxV.z:maxV.z;
    }
    BoundingBox* BB = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
-   t_end = std::chrono::high_resolution_clock::now();
+   auto t_end = std::chrono::high_resolution_clock::now();
    printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
    Image* image = new Image(img_width,img_height);  
-   if (sample_size>1) {UpdateImage(image, BB,sample_size,numThreads);} 
-   else {UpdateImage(image, BB,numThreads);}
+   UpdateImage(image, BB,sample_size,numThreads);
 
   //Update file name with time stamp
   char date[50];
@@ -200,7 +210,7 @@ int main(int argc, char *argv[]){
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	
 	//Create a window (offsetx, offsety, width, height, flags)
-	SDL_Window* window = SDL_CreateWindow("Hailin's Project 3", 100, 100, img_width, img_height, SDL_WINDOW_OPENGL);
+	SDL_Window* window = SDL_CreateWindow("CPU Path Tracer", 100, 100, img_width, img_height, SDL_WINDOW_OPENGL);
 	
 	//The above window cannot be resized which makes some code slightly easier.
 	//Below show how to make a full screen window or allow resizing
@@ -240,7 +250,11 @@ int main(int argc, char *argv[]){
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); //GL_LINEAR, GL_NEAREST
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST); //GL_LINEAR, GL_NEAREST
 
-   image->Write(imgName.c_str());
+   // image->Write(imgName.c_str());
+   tm = localtime(&t);
+   strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
+   outFileName = fileName + string(date) + ext;
+   image->Write(outFileName.c_str());
     //memset(img_data,0,4*img_w*img_h); //Load all zeros
    //Load the texture into memory
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
@@ -332,28 +346,28 @@ t_end = std::chrono::high_resolution_clock::now();
             done = true; //Exit event loop
          // if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_f) //If "f" is pressed
          //    fullscreen = !fullscreen;
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) //If "b" is pressed
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) //output image file
          {
             tm = localtime(&t);
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
             image->Write(outFileName.c_str());
          }  
-            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //If "w" is pressed
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //b - reset the camera
+         {
+            *camera = *camera0;
+            printf("resetting the scene.\n");
+            camera->PrintState();
+            UpdateImage(image, BB,sample_size,numThreads);
+            image->UpdateRawPixels();
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
+            glGenerateMipmap(GL_TEXTURE_2D);
+         }  
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_p) //p - toggle between path trace and ray trace
             {
-               *camera = *camera0;
-               printf("resetting the scene.\n");
-               camera->PrintState();
-               if (sample_size>1) {UpdateImage(image, BB,sample_size,numThreads);} 
-               else {UpdateImage(image, BB,numThreads);}
-               image->UpdateRawPixels();
-               glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
-               glGenerateMipmap(GL_TEXTURE_2D);
-            }  
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) //If "w" is pressed
-            {
-               PixelRender(window, image, step, sample_size,BB);
-            }          
+               pathTrace = !pathTrace;
+               RerenderImage(image, BB,numThreads);
+            }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
             {
                key_w_pressed();
@@ -451,20 +465,6 @@ static void CheckOption(char *option, int argc, int minargc){
 	}
 }
 
-float rand_n1(){
-  return (rand()%100-50)/100.0;
-}
-
-int log2_asm(int x){
-	uint32_t y;
-	/*asm ("\tbsr %1, %0\n"
-		: "=r"(y)
-		: "r" (x)
-	);
-	return y;*/
-    return 0;
-}
-
 void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
    // printf("samplesize=%d\n",sample_size);
    float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
@@ -486,7 +486,12 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
          float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
          vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
          ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-         Color c = scene->EvaluateRayTree(ray, BB);
+         Color c = Color(0,0,0);
+         if (pathTrace){
+            c = scene->TracePath(ray, BB, max_depth, numPaths);
+         } else {
+            c = scene->EvaluateRayTree(ray, BB);
+         }
          c_sum = c_sum + c;
          diff = c_sum.diff(c_sum_p);
          c_sum_p = c_sum;
@@ -499,36 +504,11 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
   printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 }
 
-//when sample_size is 1(default)
-void UpdateImage(Image* image, BoundingBox* BB, int numThreads){
-   // printf("samplesize=1\n");
-   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f));
-  
-   auto t_start = std::chrono::high_resolution_clock::now();
-   #pragma omp parallel for schedule(dynamic, numThreads)
-  for (int i = 0; i < img_width; i++){
-    for (int j = 0; j < img_height; j++){
-      Ray ray = Ray();
-      ray.p = camera->eye;
-      ray.depth = max_depth;
-      HitInfo hitInfo =HitInfo();
-      float u = (img_width/2.0 - img_width*((float)i/img_width));
-      float v = (img_height/2.0 - img_height*((float)j/img_height));
-      vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-      ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-      Color c = scene->EvaluateRayTree(ray, BB);
-      image->SetPixel(i,j,c);
-    }
-  }
-  auto t_end = std::chrono::high_resolution_clock::now();
-  printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-}
-
 void RerenderImage(Image* image, BoundingBox* BB, int numThreads){
    // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
    camera->Update(0.1); 
    camera->PrintState();
-   UpdateImage(image, BB,numThreads); //sample_size=1 to speed up rendering
+   UpdateImage(image, BB,1, numThreads); //sample_size=1 to speed up rendering
    image->UpdateRawPixels();
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
    glGenerateMipmap(GL_TEXTURE_2D);
@@ -559,113 +539,4 @@ void OpenGLRender(SDL_Window* window, Image* image){
    glDrawArrays(GL_TRIANGLE_STRIP, 4, 4); //Draw the two triangles (4 vertices) making up the square
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Draw the two triangles (4 vertices) making up the square
    SDL_GL_SwapWindow(window); //Double buffering   
-}
-
-void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, BoundingBox* BB){
-   // *camera = *camera0;
-   image = new Image(img_width,img_height); 
-   memset(image->rawPixels,0,4*img_width*img_height); //Load all zeros
-   OpenGLRender(window,image);
-   camera->PrintState();
-   float d = img_height/2.0/ tanf(camera->fov_h * (M_PI / 180.0f)); 
-   
-   int in = img_width/step, jn = img_height/step;
-   int i,j;
-   for (int j1 = 0; j1 < jn; j1++){ 
-      for (int i1 = 0; i1 < in; i1++){  
-         for (int j2=0;j2<step;j2++){
-            for (int i2=0;i2<step;i2++){
-               i=i1*step+i2; j=j1*step+j2;
-               Ray ray = Ray();
-               ray.p = camera->eye;
-               ray.depth = max_depth;
-               HitInfo hitInfo =HitInfo();
-               Color c_sum = Color(0,0,0);
-               Color c_sum_p = Color(1,1,1);
-               float diff = 1;
-               int k=0;
-               while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
-                  float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
-                  float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
-                  vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-                  ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-                  Color c = scene->EvaluateRayTree(ray, BB);         
-                  c_sum = c_sum + c;
-                  diff = c_sum.diff(c_sum_p);
-                  c_sum_p = c_sum;
-                  k++;    
-               }
-               c_sum = c_sum * (1.0/k);
-               image->SetPixel(i,j,c_sum);
-               image->rawPixels[4*(i+j*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
-               image->rawPixels[4*(i+j*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
-               image->rawPixels[4*(i+j*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
-               image->rawPixels[4*(i+j*img_width)+3] = 255; //alpha  
-            }
-         }
-         OpenGLRender(window,image);                
-      }
-      for (int i1=i;i1<img_width;i1++){
-         for (int j2=0;j2<step;j2++){
-            j=j1*step+j2;
-            Ray ray = Ray();
-            ray.p = camera->eye;
-            ray.depth = max_depth;
-            HitInfo hitInfo =HitInfo();
-            Color c_sum = Color(0,0,0);
-            Color c_sum_p = Color(1,1,1);
-            float diff = 1;
-            int k=0;
-            while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
-               float u = (img_width/2.0 - img_width*((i1+(k>0)*rand_n1())/img_width));
-               float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
-               vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-               ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-               Color c = scene->EvaluateRayTree(ray, BB);         
-               c_sum = c_sum + c;
-               diff = c_sum.diff(c_sum_p);
-               c_sum_p = c_sum;
-               k++;    
-            }
-            c_sum = c_sum * (1.0/k);
-            image->SetPixel(i1,j,c_sum);
-            image->rawPixels[4*(i1+j*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
-            image->rawPixels[4*(i1+j*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
-            image->rawPixels[4*(i1+j*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
-            image->rawPixels[4*(i1+j*img_width)+3] = 255; //alpha  
-         }
-      }
-      OpenGLRender(window,image);      
-   }
-     
-   for (int i1=0;i1<img_width;i1++){
-      for (int j1=j;j1<img_height;j1++){
-         Ray ray = Ray();
-               ray.p = camera->eye;
-               ray.depth = max_depth;
-               HitInfo hitInfo =HitInfo();
-               Color c_sum = Color(0,0,0);
-               Color c_sum_p = Color(1,1,1);
-               float diff = 1;
-               int k=0;
-               while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
-                  float u = (img_width/2.0 - img_width*((i1+(k>0)*rand_n1())/img_width));
-                  float v = (img_height/2.0 - img_height*((j1+(k>0)*rand_n1())/img_height));
-                  vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-                  ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-                  Color c = scene->EvaluateRayTree(ray, BB);         
-                  c_sum = c_sum + c;
-                  diff = c_sum.diff(c_sum_p);
-                  c_sum_p = c_sum;
-                  k++;    
-               }
-               c_sum = c_sum * (1.0/k);
-               image->SetPixel(i1,j1,c_sum);
-               image->rawPixels[4*(i1+j1*img_width)+0] = uint8_t(fmin(c_sum.r,1)*255);
-               image->rawPixels[4*(i1+j1*img_width)+1] = uint8_t(fmin(c_sum.g,1)*255);
-               image->rawPixels[4*(i1+j1*img_width)+2] = uint8_t(fmin(c_sum.b,1)*255);
-               image->rawPixels[4*(i1+j1*img_width)+3] = 255; //alpha  
-      }
-   }
-   OpenGLRender(window,image); 
 }

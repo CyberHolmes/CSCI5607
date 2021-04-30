@@ -6,10 +6,10 @@
 #include <memory>
 #include "bvh.h"
 
-#define GLM_FORCE_RADIANS
-#include "glm/glm.hpp"
-#include "glm/gtc/matrix_transform.hpp"
-#include "glm/gtc/type_ptr.hpp"
+// #define GLM_FORCE_RADIANS
+// #include "glm/glm.hpp"
+// #include "glm/gtc/matrix_transform.hpp"
+// #include "glm/gtc/type_ptr.hpp"
 
 class Scene{
 
@@ -44,11 +44,9 @@ public:
     void SetBackground(Color);
     void SetAmbientlight(Color);    
     std::vector<Obj*> GetObjects() {return objects;}
-    //Given a point and a direction, check for the closest hit, return information
-    // bool Hit(const Ray& ray, HitInfo&);
-
     Color ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB);
     Color EvaluateRayTree(Ray& ray, BoundingBox* BB);
+    Color TracePath(Ray& ray, BoundingBox* BB, int depth, int np);
 };
 
 #endif

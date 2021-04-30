@@ -28,7 +28,7 @@ extern std::vector<Image> textureList;
 extern Camera* camera0;
 std::string imgName = "raytraced.bmp";
 
-int max_depth = 5;
+int max_depth = 3;
 
 void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
   FILE *fp;
@@ -63,6 +63,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float tr,tg,tb,ior;
       sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f",
         &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior);
+      m = Material();
       m.SetAmbientColor(Color(ar,ag,ab));
       m.SetDiffuseColor(Color(dr,dg,db));
       m.SetSpeculorColor(Color(sr,sg,sb));
@@ -102,11 +103,29 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float r,g,b,x,y,z;
       sscanf(line, "directional_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
       scene->AddLight(new DirectionLight(Color(r,g,b),vec3(x,y,z)));  
+
+      // For path tracing
+      m = Material();
+      // m.SetAmbientColor(Color(1,1,1));
+      m.SetEmmissiveColor(Color(r,g,b));
+      materialList.emplace_back(m);
+      midx++;
+      //Plane* plane = new Plane(midx,vec3(0, 10, 0), vec3(x, y, z));
+      //scene->AddObject(plane);
     }
     if (!strcmp(command, "point_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,x,y,z;
       sscanf(line, "point_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
-      scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));   
+      scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));  
+
+      //For path tracing
+      m = Material();
+      m.SetEmmissiveColor(Color(r,g,b));
+      materialList.emplace_back(m);
+      midx++;
+      vec3 v=vec3(x,y,z);
+      Sphere* s = new Sphere(midx,v,1);
+      scene->AddObject(s);
     }
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;
@@ -194,7 +213,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float uv1, uv2, uv3;
       int num_read = sscanf(line, "triangle: %f %f %f %f %f %f", &v1, &v2, &v3, &uv1, &uv2, &uv3);
       Triangle* trangle = new Triangle(midx,v1, v2, v3);
-      if (num_read == 6 && tex_idx >= 0) {
+      if (num_read == 6 && (tex_idx >= 0 || normal_map_idx >= 0)) {
           // there is a texture as well
           trangle->addTexture(uv1, uv2, uv3, tex_idx, normal_map_idx);
       }
