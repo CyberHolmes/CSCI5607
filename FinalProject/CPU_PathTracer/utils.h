@@ -4,6 +4,10 @@
 #define MIN_T 0.001
 #define MAX_T 999999
 #include <cstdint>
+#include <stdlib.h>
+
+#define rand01 ((double) rand() / (RAND_MAX))  //random number between 0 and 1
+#define randn11 (2*rand01-1)  //random number from -1 to 1
 
 inline float mymin(float a, float b, float c){
     float out = MAX_T;
@@ -21,7 +25,11 @@ inline float mymax(float a, float b, float c){
     return out;
 }
 
-int log2_asm(int x){
+inline float rand_n1(){
+  return (rand()%100-50)/100.0;
+}
+
+inline int log2_asm(int x){
 	uint32_t y;
 	asm ("\tbsr %1, %0\n"
 		: "=r"(y)

@@ -23,6 +23,9 @@ struct Color{
     float t = luminance()-c.luminance();
     return (t>0)?t:-t;
   }
+  float mag(){
+    return r+g+b;
+  }
 };
 
 #endif

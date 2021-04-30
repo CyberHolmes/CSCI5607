@@ -20,10 +20,12 @@ struct Material{
     int ns; //phong factor
     Color tc; //transmisive color
     float ior; //index of reflection
+    Color ec; //emissive coefficients
+
     //constructor
-    Material() : ac(0,0,0), dc(1,1,1), sc(0,0,0), ns(5), tc(0,0,0), ior(1.0) {}
-    Material(Color ac_, Color dc_, Color sc_, int ns_, Color tc_, float ior_):
-        ac(ac_), dc(dc_), sc(sc_), ns(ns_), tc(tc_), ior(ior_) {}
+    Material() : ac(0,0,0), dc(0,0,0), sc(0,0,0), ns(1), tc(0,0,0), ior(1.0), ec(0,0,0) {}
+    Material(Color ac_, Color dc_, Color sc_, int ns_, Color tc_, float ior_, Color ec_):
+        ac(ac_), dc(dc_), sc(sc_), ns(ns_), tc(tc_), ior(ior_), ec(ec_) {}
 
     void SetAmbientColor(const Color& c) { ac = c;}
     void SetDiffuseColor(const Color& c) {dc = c;}
@@ -31,6 +33,7 @@ struct Material{
     void SetTransmissiveColor(const Color& c) {tc = c;}
     void SetPhongFactor(const int& n) {ns = n;}
     void SetIOR(const float& f) {ior = f;}
+    void SetEmmissiveColor(const Color& c) {ec = c;}
     
     ~Material(){}
 };

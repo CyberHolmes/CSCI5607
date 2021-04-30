@@ -61,6 +61,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float tr,tg,tb,ior;
       sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f",
         &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior);
+      m = Material();
       m.SetAmbientColor(Color(ar,ag,ab));
       m.SetDiffuseColor(Color(dr,dg,db));
       m.SetSpeculorColor(Color(sr,sg,sb));
@@ -84,11 +85,29 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float r,g,b,x,y,z;
       sscanf(line, "directional_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
       scene->AddLight(new DirectionLight(Color(r,g,b),vec3(x,y,z)));  
+
+      // For path tracing
+      m = Material();
+      // m.SetAmbientColor(Color(1,1,1));
+      m.SetEmmissiveColor(Color(r,g,b));
+      materialList.emplace_back(m);
+      midx++;
+      Plane* plane = new Plane(midx,vec3(0, 10, 0), vec3(x, y, z));
+      scene->AddObject(plane);
     }
     if (!strcmp(command, "point_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,x,y,z;
       sscanf(line, "point_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
-      scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));   
+      scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));  
+
+      //For path tracing
+      m = Material();
+      m.SetEmmissiveColor(Color(r,g,b));
+      materialList.emplace_back(m);
+      midx++;
+      vec3 v=vec3(x,y,z);
+      Sphere* s = new Sphere(midx,v,1);
+      scene->AddObject(s);  
     }
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;

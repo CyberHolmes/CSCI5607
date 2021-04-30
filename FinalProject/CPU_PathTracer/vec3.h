@@ -2,7 +2,7 @@
 #define VEC3_H
 
 #include <math.h>
-// #include "utils.h"
+#include "utils.h"
 
 //Small vector library
 // Represents a vector as 3 floats
@@ -81,22 +81,6 @@ inline long double Area(vec3 a, vec3 b, vec3 c){
 
 inline vec3 Centroid(vec3 a, vec3 b, vec3 c){
   return vec3((a.x+b.x+c.x)/3.0, (a.y+b.y+c.y)/3.0, (a.z+b.z+c.z)/3.0);
-}
-
-inline float mymin(float a, float b, float c){
-    float out = MAX_T;
-    out = (out>a)? a:out;
-    out = (out>b)? b:out;
-    out = (out>c)? c:out;
-    return out;
-}
-
-inline float mymax(float a, float b, float c){
-    float out = -MAX_T;
-    out = (out<a)? a:out;
-    out = (out<b)? b:out;
-    out = (out<c)? c:out;
-    return out;
 }
 
 inline vec3 MinBound(vec3 a, vec3 b, vec3 c){
