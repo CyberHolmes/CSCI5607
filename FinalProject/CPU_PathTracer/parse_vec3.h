@@ -22,8 +22,9 @@
 
 //Image Parmaters
 extern int img_width, img_height, max_vertices, max_normals;
-extern std::vector<vec3> vertexList, normalList;
+extern std::vector<vec3> vertexList, normalList, uvList;
 extern std::vector<Material> materialList;
+extern std::vector<Image> textureList;
 extern Camera* camera0;
 std::string imgName = "raytraced.bmp";
 
@@ -33,7 +34,6 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
   FILE *fp;
   long length;
   char line[MAX_LEN]; //assume no line is longer than 1024 characters
-
   //open file for read
   fp = fopen(fileName.c_str(),"r");
 
@@ -46,6 +46,8 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
   Material m = Material();
   materialList.emplace_back(m);//default material
   int midx = 0;
+  int tex_idx = -1;
+  int normal_map_idx = -1;
   //read each line
   while (fgets(line, MAX_LEN, fp)){
     if (line[0]=='#') continue; //skip comment
@@ -74,6 +76,22 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float r,g,b;
       sscanf(line, "background: %f %f %f",&r,&g,&b);
       scene->SetBackground(Color(r,g,b));      
+    }
+    if (!strcmp(command, "texture:")) {
+        // load the image specified in the argument
+        char tex_path[1024];
+        sscanf(line, "texture: %s", tex_path);
+        Image new_tex(tex_path);
+        textureList.push_back(new_tex);
+        tex_idx = max(tex_idx+1, normal_map_idx+1);
+    }
+    if (!strcmp(command, "normal_map:")) {
+        // load the image specified in the argument
+        char tex_path[1024];
+        sscanf(line, "normal_map: %s", tex_path);
+        Image new_tex(tex_path);
+        textureList.push_back(new_tex);
+        normal_map_idx = max(tex_idx + 1, normal_map_idx + 1);
     }
     if (!strcmp(command, "ambient_light:")){ //sphere: -3 1 0 0.7
       float r,g,b;
@@ -149,6 +167,11 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       sscanf(line, "normal: %f %f %f", &v1, &v2, &v3);
       normalList.emplace_back(vec3(v1,v2,v3));
     }
+    if (!strcmp(command, "uv:")) {
+        float uvx, uvy;
+        sscanf(line, "uv: %f %f", &uvx, &uvy);
+        uvList.emplace_back(vec3(uvx, uvy, 1));
+    }
     if (!strcmp(command, "sphere:")){ //sphere: -3 1 0 0.7
       float x,y,z,r;
       sscanf(line, "sphere: %f %f %f %f",&x,&y,&z,&r);
@@ -157,15 +180,24 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       scene->AddObject(s);  
     }
     if (!strcmp(command, "normal_triangle:")){
-      float v1, v2, v3, n1, n2, n3;
-      sscanf(line, "normal_triangle: %f %f %f %f %f %f", &v1, &v2, &v3, &n1, &n2, &n3);
+      float v1, v2, v3, n1, n2, n3, uv1, uv2, uv3;
+      int num_read = sscanf(line, "normal_triangle: %f %f %f %f %f %f %f %f %f", &v1, &v2, &v3, &n1, &n2, &n3, &uv1, &uv2, &uv3);
       TriangleNormal* trangleNormal = new TriangleNormal(midx,v1, v2, v3, n1, n2, n3);
+      if (num_read == 9 && tex_idx >= 0) {
+          // there is a texture as well
+          trangleNormal->addTexture(uv1, uv2, uv3, tex_idx);
+      }
       scene->AddObject(trangleNormal);
     }
     if (!strcmp(command, "triangle:")){
       float v1, v2, v3;
-      sscanf(line, "triangle: %f %f %f", &v1, &v2, &v3);
+      float uv1, uv2, uv3;
+      int num_read = sscanf(line, "triangle: %f %f %f %f %f %f", &v1, &v2, &v3, &uv1, &uv2, &uv3);
       Triangle* trangle = new Triangle(midx,v1, v2, v3);
+      if (num_read == 6 && tex_idx >= 0) {
+          // there is a texture as well
+          trangle->addTexture(uv1, uv2, uv3, tex_idx, normal_map_idx);
+      }
       scene->AddObject(trangle);
     }
     if (!strcmp(command, "plane:")){

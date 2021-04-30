@@ -69,8 +69,8 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         //Reflection
         vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
         Ray ray_reflect = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-        // c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
-        c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        // c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
 
         //Indirect lighting
         // float rotMat[3][3] =
@@ -78,13 +78,13 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         //     {hi.hitNorm.z, 0.0, -hi.hitNorm.x},
         //     {-hi.hitNorm.y, -hi.hitNorm.x, 0.0}
         // };
-        glm::mat4 rotMat(1);
+        /*glm::mat4 rotMat(1);
         glm::vec3 norm = glm::vec3(hi.hitNorm.x,hi.hitNorm.y,hi.hitNorm.z);
         int numPaths = 10;
         int numBounces = hi.rayDepth-1;
         
         for (int i=0; i<numPaths; i++){
-            float th =drand48()*M_PI;            
+            float th =rand()*M_PI;            
             rotMat = glm::rotate(rotMat,th,norm);
             // printf("rotM=%.2f,%.2f,%.2f\n",rotMat[0].x,rotMat[0].y,rotMat[0].z);
             glm::vec3 temp = glm::vec3(rotMat*glm::vec4(norm,1.0));
@@ -93,13 +93,13 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
             Ray ray_indirect = Ray(hi.hitPos, new_dir, numBounces);
             c_reflect = c_reflect + hi.m.sc * EvaluateRayTree(ray_indirect, BB);
             // printf("th=%f,r=%.2f,%.2f,%.2f, c=%.2f,%.2f,%.2f\n",th,new_dir.x,new_dir.y,new_dir.z,c_ind.r,c_ind.g,c_ind.b);
-        }
+        }*/
         // c_ind = Color(1.0,1.0,1.0);
         // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
         // c_ind = c_ind*(1.0/float(numPaths));
         // printf("c=%.2f,%.2f,%.2f\n",c_ind.r,c_ind.g,c_ind.b);
         // assert(false);
-        c_out = c_out + c_reflect*(1.0/(float(numPaths+1)));
+        //c_out = c_out + c_reflect*(1.0/(float(numPaths+1)));
 
         //Refraction
         float eta = (ctheta<0)?1.0/hi.m.ior:hi.m.ior;
@@ -113,7 +113,12 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
             c_out = c_out + hi.m.tc * EvaluateRayTree(ray_refract, BB);
         }
     }
-    c_out = c_out+ ambientlight * hi.m.ac;
+    // texture mapping (if possible)
+    c_out = c_out + ambientlight * hi.m.ac;
+    if (hi.texture_map != nullptr) {
+        c_out = c_out * hi.texture_map->Sample(hi.tex_coord.x, hi.tex_coord.y);
+    }
+
     return c_out;
 };
 Color Scene::EvaluateRayTree(Ray& ray, BoundingBox* BB){

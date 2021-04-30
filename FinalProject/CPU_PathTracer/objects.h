@@ -10,6 +10,8 @@
 
 extern std::vector<vec3> vertexList;
 extern std::vector<vec3> normalList;
+extern std::vector<vec3> uvList;
+extern std::vector<Image> textureList;
 // #define MIN_T 0.001
 // #define MAX_T 999999
 
@@ -49,9 +51,14 @@ struct HitInfo{
     float t2;
     vec3 hitPos2;
     vec3 hitNorm2;
-  
-    HitInfo():hitPos(vec3()),hitNorm(vec3()), t(MAX_T), v(vec3()), rayDepth(0), m(Material()), t2(MAX_T), hitPos2(vec3()),hitNorm2(vec3()) {}
-    ~HitInfo(){}
+    // new - info for texture/normal mapping
+    vec3 tex_coord;  // note, this is a homogeneous coordinate, so z is always 1
+    Image* texture_map;
+    Image* normal_map;
+    HitInfo() : hitPos(vec3()), hitNorm(vec3()), t(MAX_T), v(vec3()), rayDepth(0),
+        m(Material()), t2(MAX_T), hitPos2(vec3()), hitNorm2(vec3()), tex_coord(vec3(0, 0, 1)),
+        texture_map(nullptr), normal_map(nullptr) {};
+    ~HitInfo() {};
 };
 
 //base object class
@@ -130,11 +137,15 @@ public:
 class Triangle : public Obj{
 protected:
     int vertexP[3]; // position of the vertex
+    int uvP[3]; // index of the uv coordinates for texture mapping
+    int texture_idx = -1;  // index of texture (if this triangle has one)
+    int normal_map_idx = -1;
     //default constructor
 public:
-    Triangle() : Obj(), vertexP{0,1,2} {} //not meaningful, all three position are the first element of the vertex list
+    Triangle() : Obj(), vertexP{ 0,1,2 }, uvP{0,1,2} {} //not meaningful, all three position are the first element of the vertex list
     Triangle(int m_, int p0, int p1, int p2) : Obj(m_, Centroid(vertexList[p0],vertexList[p1],vertexList[p2])), vertexP{p0,p1,p2} {};
     ~Triangle() {} //destructor, do nothing
+    void addTexture(int uv1, int uv2, int uv3, int tex_idx, int norm_idx = -1);
     bool Hit(Ray, HitInfo&) override;
     vec3 GetBoundMin() override;
     vec3 GetBoundMax() override;

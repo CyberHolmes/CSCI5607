@@ -31,6 +31,8 @@ public:
     void SetPixel(int i, int j, Color c);
     //Get pixel color
     Color& GetPixel(int, int);
+    //Sample around the pixel
+    Color Sample(float x, float y);
     //Convert pixel data to bytes
     void UpdateRawPixels();
     //Output image to a file

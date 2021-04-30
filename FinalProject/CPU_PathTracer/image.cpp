@@ -1,5 +1,7 @@
 
 #include "image.h"
+#include <cmath>
+#include <algorithm>
 
 Image::Image(int w, int h) : width(w), height(h) {
     pixels = new Color[width*height];
@@ -10,6 +12,8 @@ Image::Image(int w, int h) : width(w), height(h) {
 Image::Image(const Image& cpy){
     width = cpy.width;
     height = cpy.height;
+    pixels = new Color[width * height];
+    rawPixels = new uint8_t[width * height * 4];
     memcpy(pixels, cpy.pixels, width*height*sizeof(Color));
 }
 
@@ -49,6 +53,17 @@ void Image::SetPixel (int i, int j, Color c){
 
 Color& Image::GetPixel(int i, int j){
     return pixels[i+j*width];
+}
+
+Color Image::Sample(float x, float y) {
+    // wrap the image if the uv coord is out of bounds
+    x = (x > 1.0) ? 1 - x : (x < 0.0) ? 1.0 + x : x;
+    y = (y > 1.0) ? 1 - y : (y < 0.0) ? 1.0 + y : y;
+    // find the location in the image
+    int pix_loc_x = round(width * x);
+    int pix_loc_y = std::max(std::min((int)round(height * y), height - 1), (int)0);
+    // now sample the location using nearest neighbor for quick testing, will upgrade to gaussian later
+    return pixels[pix_loc_x + pix_loc_y*width];
 }
 
 void Image::UpdateRawPixels(){

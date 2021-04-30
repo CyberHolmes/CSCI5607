@@ -3,10 +3,13 @@
 //openGL render code is from provided code in HW1.
 
 #include "glad/glad.h"  //Include order can matter here
-
+#ifdef _MSC_VER
+#include <SDL.h>
+#include <SDL_opengl.h>
+#else
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengl.h>
-
+#endif
 #include <cstdio>
 #include <iostream>
 #include <fstream>
@@ -58,7 +61,9 @@ int img_width = 640, img_height = 480;
 int max_vertices, max_normals;
 std::vector<vec3> vertexList;
 std::vector<vec3> normalList;
+std::vector<vec3> uvList;
 std::vector<Material> materialList;
+std::vector<Image> textureList;
 
 
 
@@ -109,6 +114,8 @@ int main(int argc, char *argv[]){
    if (argc < 2){
       // std::cout << "Usage: ./a.out scenefile\n";
       ShowUsage();
+      int val;
+      std::cin >> val;
       return(0);
    }
    argv += 1, argc -= 1;
@@ -450,11 +457,12 @@ float rand_n1(){
 
 int log2_asm(int x){
 	uint32_t y;
-	asm ("\tbsr %1, %0\n"
+	/*asm ("\tbsr %1, %0\n"
 		: "=r"(y)
 		: "r" (x)
 	);
-	return y;
+	return y;*/
+    return 0;
 }
 
 void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
@@ -473,7 +481,7 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
       Color c_sum_p = Color(1,1,1);
       float diff = 1;
       int k=0;
-      while ((k<5) || ((k<sample_size) && (diff > 0.1))){ //
+      while (((k<sample_size) && (diff > 0.1))){ //
          float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
          float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
          vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;

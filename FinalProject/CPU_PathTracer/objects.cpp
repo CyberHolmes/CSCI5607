@@ -1,4 +1,5 @@
 #include "objects.h"
+#include "glm/glm.hpp"
 
 vec3 Obj::GetPos(){
     return pos;
@@ -388,6 +389,14 @@ vec3 Sphere::GetBoundMax(){
     return pos + vec3(r,r,r)+vec3(MIN_T,MIN_T,MIN_T);
 }
 
+void Triangle::addTexture(int uv1, int uv2, int uv3, int tex_idx, int norm_idx) {
+    uvP[0] = uv1;
+    uvP[1] = uv2;
+    uvP[2] = uv3;
+    texture_idx = tex_idx;
+    normal_map_idx = norm_idx;
+}
+
 bool Triangle::Hit(Ray ray, HitInfo& hi){
     vec3 v1 = vertexList[vertexP[0]];
     vec3 v2 = vertexList[vertexP[1]];
@@ -416,6 +425,44 @@ bool Triangle::Hit(Ray ray, HitInfo& hi){
         hi.rayDepth = ray.depth;  
         hi.v = -ray.d;
         hi.t = t;
+        hi.texture_map = (texture_idx >= 0) ? &textureList[texture_idx] : nullptr;
+        if (texture_idx >= 0) {
+            hi.tex_coord = a1 * uvList[uvP[0]] + a2 * uvList[uvP[1]] + a3 * uvList[uvP[2]];
+        }
+        if (normal_map_idx >= 0) {
+            hi.tex_coord = a1 * uvList[uvP[0]] + a2 * uvList[uvP[1]] + a3 * uvList[uvP[2]];
+            // create a Tangent, BiTangent, Normal Matrix and use it to get the normal at this point
+            vec3 edge1 = vertexList[vertexP[2]] - vertexList[vertexP[0]];
+            vec3 edge2 = vertexList[vertexP[1]] - vertexList[vertexP[0]];
+            vec3 uv1 = uvList[uvP[2]] - uvList[uvP[0]];
+            vec3 uv2 = uvList[uvP[1]] - uvList[uvP[0]];
+            glm::vec3 tangent, bitangent, normal;
+            float f = 1.0f / (uv1.x * uv2.y - uv2.x * uv1.y);
+
+            tangent.x = f * (uv2.y * edge1.x - uv1.y * edge2.x);
+            tangent.y = f * (uv2.y * edge1.y - uv1.y * edge2.y);
+            tangent.z = f * (uv2.y * edge1.z - uv1.y * edge2.z);
+            tangent = glm::normalize(tangent);
+
+            normal.x = hi.hitNorm.x;
+            normal.y = hi.hitNorm.y;
+            normal.z = hi.hitNorm.z;
+            normal = glm::normalize(normal);
+
+            bitangent = glm::cross(normal, tangent);
+
+            glm::mat3 tbn(tangent, bitangent, normal);
+            // get the color (normal) in the image
+            Color normal_in_rgb = textureList[normal_map_idx].Sample(hi.tex_coord.x, hi.tex_coord.y);
+            // convert the color into a vector
+            glm::vec3 norm_in_map;
+            norm_in_map.x = 2 * normal_in_rgb.r - 1.0;
+            norm_in_map.y = 2 * normal_in_rgb.g - 1.0;
+            norm_in_map.z = 2 * normal_in_rgb.b - 1.0;
+            // bring the normal into the triangle's basis
+            glm::vec3 triangle_pt_normal = tbn * norm_in_map;
+            hi.hitNorm = vec3(triangle_pt_normal.x, triangle_pt_normal.y, triangle_pt_normal.z);
+        }
         return true;    
     }
     return false;
@@ -480,6 +527,10 @@ bool TriangleNormal::Hit(Ray ray, HitInfo& hi){
         hi.rayDepth = ray.depth;
         hi.v = -ray.d;
         hi.t = t;
+        hi.texture_map = (texture_idx >= 0) ? &textureList[texture_idx] : nullptr;
+        if (texture_idx >= 0) {
+            hi.tex_coord = a1 * uvList[uvP[0]] + a2 * uvList[uvP[1]] + a3 * uvList[uvP[2]];
+        }
         return true;       
     }
     return false;
