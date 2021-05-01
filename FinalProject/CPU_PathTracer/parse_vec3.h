@@ -104,12 +104,12 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       sscanf(line, "directional_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
       scene->AddLight(new DirectionLight(Color(r,g,b),vec3(x,y,z)));  
 
-      // For path tracing
-      m = Material();
-      // m.SetAmbientColor(Color(1,1,1));
-      m.SetEmmissiveColor(Color(r,g,b));
-      materialList.emplace_back(m);
-      midx++;
+      // // For path tracing
+      // m = Material();
+      // // m.SetAmbientColor(Color(1,1,1));
+      // m.SetEmmissiveColor(Color(r,g,b));
+      // materialList.emplace_back(m);
+      // midx++;
       //Plane* plane = new Plane(midx,vec3(0, 10, 0), vec3(x, y, z));
       //scene->AddObject(plane);
     }
@@ -118,14 +118,14 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       sscanf(line, "point_light: %f %f %f %f %f %f",&r,&g,&b,&x,&y,&z);
       scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));  
 
-      //For path tracing
-      m = Material();
-      m.SetEmmissiveColor(Color(r,g,b));
-      materialList.emplace_back(m);
-      midx++;
-      vec3 v=vec3(x,y,z);
-      Sphere* s = new Sphere(midx,v,1);
-      scene->AddObject(s);
+      // //For path tracing
+      // m = Material();
+      // m.SetEmmissiveColor(Color(r,g,b));
+      // materialList.emplace_back(m);
+      // midx++;
+      // vec3 v=vec3(x,y,z);
+      // Sphere* s = new Sphere(midx,v,1);
+      // scene->AddObject(s);
     }
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;
@@ -237,7 +237,6 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       sscanf(line, "CSG: %d",&ut);
       int cnt=0;
       Obj* obj[2];
-      printf("Adding CSG objects\n");
       while ((fgets(line, MAX_LEN, fp)) && cnt<2){
         if (line[0]=='#') continue; //skip comment
         if (sscanf(line,"%s ",command)<1) continue;
@@ -264,7 +263,6 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
           vec3 v=vec3(x,y,z);
           Sphere* s = new Sphere(midx,v,r);
           obj[cnt]=s;  
-          printf("Adding object#%d\n",cnt);
           cnt++;
         }
         if (!strcmp(command, "box:")){ //box: -3 1 0 0.7

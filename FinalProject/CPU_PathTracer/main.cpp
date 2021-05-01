@@ -101,11 +101,10 @@ const GLchar* fragmentSource =
    "}";
    
 bool fullscreen = false;
-int numPaths = 20;
 float mouse_dragging = false;
 bool pathTrace = false; //default is ray trace
 int main(int argc, char *argv[]){
-   int sample_size = 1; //set default sample_size, may be overwritten by command input
+   int sample_size = 1000; //set default sample_size, may be overwritten by command input
    int numThreads = 8; //default number of threads, may be overwritten by command input
    
   //Read command line paramaters to get scene file
@@ -144,11 +143,6 @@ int main(int argc, char *argv[]){
             CheckOption(*argv, argc, 2);
             max_depth = atoi(argv[1]);
             argv += 2, argc -= 2;
-         } else if (!strcmp(*argv, "-numpaths"))
-         {
-            CheckOption(*argv, argc, 2);
-            numPaths = atoi(argv[1]);
-            argv += 2, argc -= 2;
          } else if (!strcmp(*argv, "-pathtrace"))
          {
             pathTrace = true;
@@ -167,8 +161,8 @@ int main(int argc, char *argv[]){
    normalList.reserve(500);
    materialList.reserve(50);
 
-   printf("sample size = %d, number of threads = %d, ray depth = %d, numPaths = %d\n",
-      sample_size,numThreads, max_depth, numPaths);
+   printf("sample size = %d, ray depth = %d, number of threads = %d\n",
+      sample_size, max_depth,numThreads);
    
    auto t_start = std::chrono::high_resolution_clock::now();
    std::vector<Obj*> objList = scene->GetObjects();
@@ -348,6 +342,7 @@ t_end = std::chrono::high_resolution_clock::now();
          //    fullscreen = !fullscreen;
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_o) //output image file
          {
+            t = time(NULL);
             tm = localtime(&t);
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
@@ -478,24 +473,24 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
       ray.depth = max_depth;
       HitInfo hitInfo =HitInfo();
       Color c_sum = Color(0,0,0);
-      Color c_sum_p = Color(1,1,1);
+      Color c = Color(0,0,0);
+      Color c_p = Color(1,1,1);
       float diff = 1;
       int k=0;
-      while (((k<sample_size) && (diff > 0.1))){ //
-         float u = (img_width/2.0 - img_width*((i+(k>0)*rand_n1())/img_width));
-         float v = (img_height/2.0 - img_height*((j+(k>0)*rand_n1())/img_height));
+      while (k<sample_size){ //
+         float u = (img_width/2.0 - img_width*((i+(k>0)*randn1)/img_width));
+         float v = (img_height/2.0 - img_height*((j+(k>0)*randn1)/img_height));
          vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
-         ray.d = (p - camera->eye).normalized();  //Normalizing here is optional
-         Color c = Color(0,0,0);
+         ray.d = (p - camera->eye).normalized();  //Normalizing here is optional         
          if (pathTrace){
-            c = scene->TracePath(ray, BB, max_depth, numPaths);
+            c = scene->TracePath(ray, BB, max_depth);
          } else {
             c = scene->EvaluateRayTree(ray, BB);
+            if (c.diff(c_p)<0.1) break;
+            c_p = c;
          }
          c_sum = c_sum + c;
-         diff = c_sum.diff(c_sum_p);
-         c_sum_p = c_sum;
-         k++;    
+         k++;
       }
       image->SetPixel(i,j,c_sum * (1.0/k));
     }
@@ -519,6 +514,7 @@ void RerenderImage(Image* image, BoundingBox* BB, int numThreads){
  **/
 static char options[] =
 "-samplesize <n>\n"
+"-depth <n>\n"
 "-numthreads <n>\n"
 ;
 

@@ -46,7 +46,7 @@ public:
     std::vector<Obj*> GetObjects() {return objects;}
     Color ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB);
     Color EvaluateRayTree(Ray& ray, BoundingBox* BB);
-    Color TracePath(Ray& ray, BoundingBox* BB, int depth, int np);
+    Color TracePath(Ray& ray, BoundingBox* BB, int depth);
 };
 
 #endif
