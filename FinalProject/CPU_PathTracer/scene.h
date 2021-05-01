@@ -19,9 +19,10 @@ class Scene{
     int numLights;
     std::vector<Obj*> objects;
     std::vector<Light*> lights;
+    int max_depth;
 
 public:
-    Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0){
+    Scene() : ambientlight(Color()),background(Color()),numObj(0),numLights(0), max_depth(0){
         objects.get_allocator().allocate(1000);
         lights.get_allocator().allocate(20);
     };
@@ -42,7 +43,8 @@ public:
     Color GetAmbientLight();
     Color GetBackground();
     void SetBackground(Color);
-    void SetAmbientlight(Color);    
+    void SetAmbientlight(Color);  
+    void SetMaxDepth(int d) {max_depth = d;}  
     std::vector<Obj*> GetObjects() {return objects;}
     Color ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB);
     Color EvaluateRayTree(Ray& ray, BoundingBox* BB);

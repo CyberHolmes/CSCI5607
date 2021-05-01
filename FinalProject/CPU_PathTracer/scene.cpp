@@ -33,6 +33,13 @@ void Scene::SetAmbientlight(Color c){
 }; 
 Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     Color c_out = Color();
+    float diffusive_l = hi.m.dc.luminance();
+    float reflective_l = hi.m.sc.luminance();
+    float refractive_l = hi.m.tc.luminance();
+    float l_sum = diffusive_l + reflective_l + refractive_l;
+    float diffusive_a = diffusive_l/l_sum;
+    float reflective_a = refractive_l/l_sum;
+    float refractive_a = refractive_l/l_sum;
     for (int i=0; i<numLights; i++){
         Light* l = lights[i];       
         Ray ray_shadow = Ray(hi.hitPos, l->CalDir(hi.hitPos), 1);
@@ -44,14 +51,14 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
             if (shadow_hit) continue;
         } else if (shadow_hit && shadow_hitInfo.t < Distance(l->p, hi.hitPos )) 
             continue;
-        c_out = c_out + l->Shading(hi);        
+        c_out = c_out + l->Shading(hi)*diffusive_a;        
     }
     if (hi.rayDepth>0){
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
         //Reflection
         vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
         Ray ray_reflect = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-        c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB);
+        c_out = c_out + hi.m.sc * EvaluateRayTree(ray_reflect, BB)*reflective_a;
 
         //Refraction
         float eta = (ctheta<0)?1.0/hi.m.ior:hi.m.ior;
@@ -62,7 +69,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         if (rf_term > 0) { //there is refration
             rdir = (-sqrt(rf_term) - ctheta * eta) * n + eta * ray.d;
             Ray ray_refract = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-            c_out = c_out + hi.m.tc * EvaluateRayTree(ray_refract, BB);
+            c_out = c_out + hi.m.tc * EvaluateRayTree(ray_refract, BB)*refractive_a;
         }
     }
     c_out = c_out+ ambientlight * hi.m.ac;
@@ -104,42 +111,47 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth){
     }
     HitInfo hi;
     if (!SearchBVHTree(ray,BB,hi)) {
-        // Check for light
+        #ifdef PATH_USELIGHT
+        if (depth == max_depth) return background;
         Color c_out = Color();
         bool hitLight = false;
         for (int i=0; i<numLights; i++){
             Light* l = lights[i];
             if (l->type == DIRECTION_LIGHT){
-                float ctheta = dot(ray.d.normalized(), l->CalDir(ray.d).normalized());
+                float ctheta = dot(ray.d.normalized(), l->CalDir(ray.d).normalized())*2.0;
                 if (ctheta > MIN_T){
-                    c_out = c_out + l->c * ctheta * 2.0;
+                    c_out = c_out + l->c * ctheta *2.0;
                     hitLight = true;
                 }
-                // printf("got dir light\n"); assert(false);
+            // } else if (l->type == POINT_LIGHT) {
+            //     vec3 ldir = l->p - ray.p;
+            //     float ctheta = dot(ray.d.normalized(), ldir.normalized());
+            //     if (ctheta>0.1){  
+            //         c_out = c_out + l->c * (ctheta *(1.0/ldir.lengthsq())*3.0);
+            //         hitLight = true;
+            //     }
             } else if (l->type == POINT_LIGHT) {
                 vec3 ldir = l->p - ray.p;
                 float ctheta = dot(ray.d.normalized(), ldir.normalized());
-                if (ctheta>MIN_T){
-                    c_out = c_out + l->c * ctheta *(1.0/ldir.lengthsq()) * 2.0;
+                float a1 = 0.5, a2 = 0.34;
+                if (ctheta>a2){  
+                    float term = (ctheta<a1)?(1.0-(a1-ctheta)/(a1-a2)) : 1.0;       
+                    c_out = c_out + l->c * (ctheta *(1.0/ldir.lengthsq())*3.0*term);
                     hitLight = true;
-                    // printf("got dir light\n"); assert(false);
                 }
             }
         }
         if (hitLight){
             return c_out;
         }
+        #endif
         return background;//Color(0,0,0);
     }
 
-    Material m = hi.m;
-    Color em = m.ec;
-    // if (m.ec.mag()>0.0) {
-    //     return em;
+    // if (hi.m.ec.mag()>0.0) {
+    //     return hi.m.ec;
     // }
-    Color c_sum = Color(0,0,0);
-    
-    int cnt = 0;
+   
     // bool diffusive = false;//(m.dc.mag()>0.0);
     // bool reflective = false;//(m.sc.mag()>0.0);
     // bool refractive = false;//(m.tc.mag()>0.0);
@@ -154,12 +166,21 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth){
     //         refractive = true;
     //         break;
     // }
-    bool diffusive = (m.dc.mag()>0.0);
-    bool reflective = (m.sc.mag()>0.0);
-    bool refractive = (m.tc.mag()>0.0);
+    bool diffusive = (hi.m.dc.mag()>0.0);
+    bool reflective = (hi.m.sc.mag()>0.0);
+    bool refractive = (hi.m.tc.mag()>0.0);
     Color c_indirect = Color(0,0,0);
     Color c_reflective = Color(0,0,0);
     Color c_refractive = Color(0,0,0);
+
+    float diffusive_l = hi.m.dc.luminance();
+    float reflective_l = hi.m.sc.luminance();
+    float refractive_l = hi.m.tc.luminance();
+    float l_sum = diffusive_l + reflective_l + refractive_l;
+    float diffusive_a = diffusive_l/l_sum;
+    float reflective_a = refractive_l/l_sum;
+    float refractive_a = refractive_l/l_sum;
+    int cnt=0;
     
     if (diffusive)
     {
@@ -169,15 +190,16 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth){
         new_dir = sampleAroundNormalCosine(hi.hitNorm,t1,t2);  //CosineSampleHemisphere(hi.hitNorm,t1,t2);         
         Ray ray_indirect = Ray(hi.hitPos, new_dir, depth-1);           
         float ctheta = dot(new_dir,hi.hitNorm);            
-        c_indirect = c_indirect + m.dc * TracePath(ray_indirect, BB, depth-1);// *ctheta * ctheta;
+        c_indirect = hi.m.dc * TracePath(ray_indirect, BB, depth-1) * diffusive_a;// *ctheta * ctheta;
+        cnt++;
     }    
     if (reflective)
     { //reflective
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
         vec3 rdir = ray.d - 2 * ctheta *hi.hitNorm;
         Ray ray_reflect = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-        Color incoming = TracePath(ray_reflect, BB, depth-1);
-        c_reflective =  m.sc * incoming;// * fade_f;
+        Color incoming = TracePath(ray_reflect, BB, depth-1);        
+        c_reflective =  hi.m.sc * incoming * reflective_a;// * fade_f;
         cnt++;
     }
     // refraction
@@ -192,9 +214,9 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth){
         if (rf_term > 0) { //there is refration
             vec3 rdir = (-sqrt(rf_term) - ctheta * eta) * n + eta * ray.d;
             Ray ray_refract = Ray(hi.hitPos, rdir.normalized(),hi.rayDepth-1);
-            c_refractive = hi.m.tc * TracePath(ray_refract, BB,depth-1);
+            c_refractive = hi.m.tc * TracePath(ray_refract, BB,depth-1) * refractive_a;
             cnt++;
         }
     }
-    return em + (c_reflective + c_indirect*2 + c_refractive)*(1.0/float(cnt+1));// + m.ac * ambientlight;    
+    return (c_reflective + c_indirect + c_refractive);// + m.ac * ambientlight;    
 }

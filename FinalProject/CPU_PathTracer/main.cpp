@@ -44,7 +44,7 @@ using namespace std;
 
 static void CheckOption(char *option, int argc, int minargc);
 void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
-void RerenderImage(Image* image, BoundingBox* BB, int numThreads);
+void RerenderImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
 static void ShowUsage(void);
 void OpenGLRender(SDL_Window* window, Image* image);
 void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, BoundingBox* BB);
@@ -163,6 +163,8 @@ int main(int argc, char *argv[]){
 
    printf("sample size = %d, ray depth = %d, number of threads = %d\n",
       sample_size, max_depth,numThreads);
+   
+   scene->SetMaxDepth(max_depth);
    
    auto t_start = std::chrono::high_resolution_clock::now();
    std::vector<Obj*> objList = scene->GetObjects();
@@ -361,58 +363,60 @@ t_end = std::chrono::high_resolution_clock::now();
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_p) //p - toggle between path trace and ray trace
             {
                pathTrace = !pathTrace;
-               RerenderImage(image, BB,numThreads);
+               RerenderImage(image, BB,sample_size, numThreads);
             }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
-            {
-               key_w_pressed();
-               RerenderImage(image, BB,numThreads);
+         if (!pathTrace){
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
+               {
+                  key_w_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+                  }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) //If "s" is pressed
+               {
+                  key_s_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
                }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) //If "s" is pressed
-            {
-               key_s_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) //If "a" is pressed
-            {
-               key_a_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "d" is pressed
-            {
-               key_d_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_q) //If "o" is pressed
-            {
-               key_q_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e) //If "o" is pressed
-            {
-               key_e_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
-            {
-               key_left_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
-            {
-               key_right_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
-            {
-               key_up_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
-            {
-               key_down_pressed();
-               RerenderImage(image, BB,numThreads);
-            }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) //If "a" is pressed
+               {
+                  key_a_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "d" is pressed
+               {
+                  key_d_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_q) //If "o" is pressed
+               {
+                  key_q_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e) //If "o" is pressed
+               {
+                  key_e_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
+               {
+                  key_left_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
+               {
+                  key_right_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
+               {
+                  key_up_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
+               {
+                  key_down_pressed();
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
+         }
          // SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
 //          t_end = std::chrono::high_resolution_clock::now();
 //   printf("OpenGL Display took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
@@ -499,11 +503,11 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
   printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 }
 
-void RerenderImage(Image* image, BoundingBox* BB, int numThreads){
+void RerenderImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
    // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
    camera->Update(0.1); 
    camera->PrintState();
-   UpdateImage(image, BB,1, numThreads); //sample_size=1 to speed up rendering
+   UpdateImage(image, BB,sample_size, numThreads); //sample_size=1 to speed up rendering
    image->UpdateRawPixels();
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
    glGenerateMipmap(GL_TEXTURE_2D);

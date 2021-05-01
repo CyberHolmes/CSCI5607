@@ -1,7 +1,7 @@
 #Side view of dragon
 camera_pos: 0 0.1 0.3
 camera_fwd: 0 0 1
-directional_light: .8 .8 .8 1 -1 -1
+directional_light: .3 .3 .3 1 -1 -1
 
 #Front view of dragon
 #camera_pos: -.3 .1 -.17

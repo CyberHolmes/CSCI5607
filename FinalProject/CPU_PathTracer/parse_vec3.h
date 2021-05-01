@@ -119,6 +119,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       scene->AddLight(new PointLight(Color(r,g,b),vec3(x,y,z)));  
 
       // //For path tracing
+      // #ifndef PATH_USELIGHT
       // m = Material();
       // m.SetEmmissiveColor(Color(r,g,b));
       // materialList.emplace_back(m);
@@ -126,6 +127,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       // vec3 v=vec3(x,y,z);
       // Sphere* s = new Sphere(midx,v,1);
       // scene->AddObject(s);
+      // #endif
     }
     if (!strcmp(command, "spot_light:")){ //sphere: -3 1 0 0.7
       float r,g,b,px,py,pz,dx,dy,dz,a1,a2;
