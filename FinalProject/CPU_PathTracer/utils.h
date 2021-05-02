@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <stdlib.h>
 
-#define PATH_USELIGHT
+// #define PATH_USELIGHT
 #define rand01 ((double) rand() / (RAND_MAX))  //random number between 0 and 1
 #define randn11 (2*rand01-1)  //random number from -1 to 1
 #define randn1 (rand01-1)  //random number from -0.5 to 0.5

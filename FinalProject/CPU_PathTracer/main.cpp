@@ -103,6 +103,7 @@ const GLchar* fragmentSource =
 bool fullscreen = false;
 float mouse_dragging = false;
 bool pathTrace = false; //default is ray trace
+bool uselight = false; //path tracing lighting option control
 int main(int argc, char *argv[]){
    int sample_size = 1000; //set default sample_size, may be overwritten by command input
    int numThreads = 8; //default number of threads, may be overwritten by command input
@@ -167,6 +168,7 @@ int main(int argc, char *argv[]){
    scene->SetMaxDepth(max_depth);
    
    auto t_start = std::chrono::high_resolution_clock::now();
+   //BVH for ray tracer
    std::vector<Obj*> objList = scene->GetObjects();
    vec3 minV = vec3(MAX_T,MAX_T,MAX_T), maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
    // printf("number objects = %ld\n",objList.size());
@@ -181,11 +183,31 @@ int main(int argc, char *argv[]){
       maxV.y = (maxV.y<curMaxV.y)?curMaxV.y:maxV.y;
       maxV.z = (maxV.z<curMaxV.z)?curMaxV.z:maxV.z;
    }
-   BoundingBox* BB = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
+   BoundingBox* BB1 = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
+
+
+   //BVH for path tracer
+   std::vector<Obj*> objList2 = scene->GetObjects2();
+   minV = vec3(MAX_T,MAX_T,MAX_T); maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
+   // printf("number objects = %ld\n",objList.size());
+   for ( auto const& obj : objList2){
+      vec3 curMinV = obj->GetBoundMin();
+      vec3 curMaxV = obj->GetBoundMax();
+      // printf("pos=%f,%f,%f\n",obj->GetPos().x,obj->GetPos().y,obj->GetPos().z);
+      minV.x = (minV.x>curMinV.x)?curMinV.x:minV.x;
+      minV.y = (minV.y>curMinV.y)?curMinV.y:minV.y;
+      minV.z = (minV.z>curMinV.z)?curMinV.z:minV.z;
+      maxV.x = (maxV.x<curMaxV.x)?curMaxV.x:maxV.x;
+      maxV.y = (maxV.y<curMaxV.y)?curMaxV.y:maxV.y;
+      maxV.z = (maxV.z<curMaxV.z)?curMaxV.z:maxV.z;
+   }
+   BoundingBox* BB2 = BuildBVHTree(objList2,minV,maxV,log2_asm(objList2.size())+2);
+
    auto t_end = std::chrono::high_resolution_clock::now();
    printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
-   Image* image = new Image(img_width,img_height);  
+   Image* image = new Image(img_width,img_height); 
+   BoundingBox* BB = (pathTrace)?BB2:BB1; //pointer to switch the two BVHs 
    UpdateImage(image, BB,sample_size,numThreads);
 
   //Update file name with time stamp
@@ -324,13 +346,13 @@ int main(int argc, char *argv[]){
    glEnableVertexAttribArray(texAttrib);
    glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, 7*sizeof(float), (void*)(5*sizeof(float)));
       
-t_end = std::chrono::high_resolution_clock::now();
+   t_end = std::chrono::high_resolution_clock::now();
   printf("OpenGL Prep took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
    //Event Loop (Loop forever processing each event as fast as possible)
    SDL_Event windowEvent;
    bool done = false;
-   // bool gammaOn = false;   
+   // bool gammaOn = false;      
 
    while (!done){
       // t_start = std::chrono::high_resolution_clock::now();
@@ -363,58 +385,77 @@ t_end = std::chrono::high_resolution_clock::now();
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_p) //p - toggle between path trace and ray trace
             {
                pathTrace = !pathTrace;
+               BB = (pathTrace)? BB2 :BB1;
                RerenderImage(image, BB,sample_size, numThreads);
+            }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l) //l - path trace lighting option control, does nothing if ray trace
+            {
+               if (pathTrace){
+                  uselight = !uselight;
+                  if (uselight) BB = BB1;
+                  RerenderImage(image, BB,sample_size, numThreads);
+               }
             }
          if (!pathTrace){
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
                {
                   key_w_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                   }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) //If "s" is pressed
                {
                   key_s_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) //If "a" is pressed
                {
                   key_a_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "d" is pressed
                {
                   key_d_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_q) //If "o" is pressed
                {
                   key_q_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e) //If "o" is pressed
                {
                   key_e_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
                {
                   key_left_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
                {
                   key_right_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
                {
                   key_up_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
                {
                   key_down_pressed();
                   RerenderImage(image, BB,sample_size, numThreads);
+                  camera->PrintState();
                }
          }
          // SDL_SetWindowFullscreen(window, fullscreen ? SDL_WINDOW_FULLSCREEN : 0); //Set to full screen 
@@ -433,7 +474,10 @@ t_end = std::chrono::high_resolution_clock::now();
 
       SDL_GL_SwapWindow(window); //Double buffering
    }
-   DeallocateBVHTree(BB);
+   DeallocateBVHTree(BB1);
+   DeallocateBVHTree(BB2);
+   BB1 = NULL;
+   BB2 = NULL;
    BB = NULL;
    // delete [] img_data;
    delete image;
@@ -487,7 +531,7 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
          vec3 p = camera->eye - d*camera->forward + u*camera->right + v*camera->up;
          ray.d = (p - camera->eye).normalized();  //Normalizing here is optional         
          if (pathTrace){
-            c = scene->TracePath(ray, BB, max_depth);
+            c = scene->TracePath(ray, BB, max_depth, uselight);
          } else {
             c = scene->EvaluateRayTree(ray, BB);
             if (c.diff(c_p)<0.1) break;
@@ -505,8 +549,7 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
 
 void RerenderImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
    // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
-   camera->Update(0.1); 
-   camera->PrintState();
+   camera->Update(0.1);    
    UpdateImage(image, BB,sample_size, numThreads); //sample_size=1 to speed up rendering
    image->UpdateRawPixels();
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);

@@ -61,8 +61,9 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float sr,sg,sb;
       int ns;
       float tr,tg,tb,ior;
-      sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f",
-        &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior);
+      float er=0,eg=0,eb=0;
+      sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f",
+        &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior,&er,&eg,&eb);
       m = Material();
       m.SetAmbientColor(Color(ar,ag,ab));
       m.SetDiffuseColor(Color(dr,dg,db));
@@ -70,6 +71,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       m.SetTransmissiveColor(Color(tr,tg,tb));
       m.SetPhongFactor(ns);
       m.SetIOR(ior);
+      m.SetEmmissiveColor(Color(er,eg,eb));
       materialList.emplace_back(m);
       midx++;
     }    
@@ -198,41 +200,56 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       sscanf(line, "sphere: %f %f %f %f",&x,&y,&z,&r);
       vec3 v=vec3(x,y,z);
       Sphere* s = new Sphere(midx,v,r);
-      scene->AddObject(s);  
+      if (m.ec.mag()==0){
+      scene->AddObject(s);
+      }
+      scene->AddObject2(s);
     }
     if (!strcmp(command, "normal_triangle:")){
       float v1, v2, v3, n1, n2, n3, uv1, uv2, uv3;
       int num_read = sscanf(line, "normal_triangle: %f %f %f %f %f %f %f %f %f", &v1, &v2, &v3, &n1, &n2, &n3, &uv1, &uv2, &uv3);
       TriangleNormal* trangleNormal = new TriangleNormal(midx,v1, v2, v3, n1, n2, n3);
-      if (num_read == 9 && tex_idx >= 0) {
-          // there is a texture as well
-          trangleNormal->addTexture(uv1, uv2, uv3, tex_idx);
+      if (m.ec.mag()==0){
+        if (num_read == 9 && tex_idx >= 0) {
+            // there is a texture as well
+            trangleNormal->addTexture(uv1, uv2, uv3, tex_idx);
+        }      
+        scene->AddObject(trangleNormal);
       }
-      scene->AddObject(trangleNormal);
+      scene->AddObject2(trangleNormal);
     }
     if (!strcmp(command, "triangle:")){
       float v1, v2, v3;
       float uv1, uv2, uv3;
       int num_read = sscanf(line, "triangle: %f %f %f %f %f %f", &v1, &v2, &v3, &uv1, &uv2, &uv3);
       Triangle* trangle = new Triangle(midx,v1, v2, v3);
-      if (num_read == 6 && (tex_idx >= 0 || normal_map_idx >= 0)) {
-          // there is a texture as well
-          trangle->addTexture(uv1, uv2, uv3, tex_idx, normal_map_idx);
+      if (m.ec.mag()==0){
+        if (num_read == 6 && (tex_idx >= 0 || normal_map_idx >= 0)) {
+            // there is a texture as well
+            trangle->addTexture(uv1, uv2, uv3, tex_idx, normal_map_idx);
+        }
+        scene->AddObject(trangle);
       }
-      scene->AddObject(trangle);
+      scene->AddObject2(trangle);
     }
     if (!strcmp(command, "plane:")){
       float v1, v2, v3, n1, n2, n3;
       sscanf(line, "plane: %f %f %f %f %f %f", &v1, &v2, &v3, &n1, &n2, &n3);
       Plane* plane = new Plane(midx,vec3(v1, v2, v3), vec3(n1, n2, n3));
-      scene->AddObject(plane);
+      if (m.ec.mag()==0){
+        scene->AddObject(plane);
+      }
+      scene->AddObject2(plane);
     }
     if (!strcmp(command, "box:")){ //box: -3 1 0 0.7
       float x,y,z,l;
       sscanf(line, "box: %f %f %f %f",&x,&y,&z,&l);
       vec3 v=vec3(x,y,z);
       Box* b = new Box(midx,v,l);
-      scene->AddObject(b);  
+      if (m.ec.mag()==0){
+        scene->AddObject(b);
+      }
+      scene->AddObject2(b);
     }
     if (!strcmp(command, "CSG:")){ //CSG objects, the new two objects will be part of csg
       int ut;
@@ -248,8 +265,9 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
           float sr,sg,sb;
           int ns;
           float tr,tg,tb,ior;
-          sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f",
-            &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior);
+          float er=0,eg=0,eb=0;
+          sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f",
+            &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior,&er,&eg,&eb);
           m.SetAmbientColor(Color(ar,ag,ab));
           m.SetDiffuseColor(Color(dr,dg,db));
           m.SetSpeculorColor(Color(sr,sg,sb));
@@ -278,6 +296,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       } //got two objects
       CSG* csg= new CSG(obj[0],obj[1],ut);
       scene->AddObject(csg);
+      scene->AddObject2(csg);
     }
   }
   //Create an orthagonal camera basis

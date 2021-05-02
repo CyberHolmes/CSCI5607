@@ -198,7 +198,7 @@ bool Box::Hit(Ray ray, HitInfo& hi) {
     return true;
 };
 //Helper function to find positive max value in a array, also returns the index
-float FindMax(float* arr, int size, int& idx){
+static float FindMax(float* arr, int size, int& idx){
     float maxv = 0;
     idx = -1;
     for (int i=0;i<size;i++){
