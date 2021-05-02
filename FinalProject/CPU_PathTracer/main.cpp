@@ -352,6 +352,8 @@ int main(int argc, char *argv[]){
    //Event Loop (Loop forever processing each event as fast as possible)
    SDL_Event windowEvent;
    bool done = false;
+   bool dragging = false;
+   vec3 mouse_pos;
    // bool gammaOn = false;      
 
    while (!done){
@@ -463,7 +465,47 @@ int main(int argc, char *argv[]){
 //   printf("OpenGL Display took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 
       }     
-
+      int mx, my;
+      if (SDL_GetMouseState(&mx, &my) & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+          bool dirty = false;
+          if (!dragging) {
+              // mouse click
+              mouse_pos = vec3(mx, my, 0);
+          }
+          else {
+              // mouse drag
+              vec3 cur_pos(mx, my, 0);
+              // get difference between last mouse position and current mouse position
+              vec3 offset = cur_pos - mouse_pos;
+              mouse_pos = cur_pos;
+              if (offset.x > 0) {
+                  // moved right
+                  key_right_pressed();
+                  dirty = true;
+              }
+              else if (offset.x < 0) {
+                  // moved left
+                  key_left_pressed();
+                  dirty = true;
+              }
+              if (offset.y > 0) {
+                  // moved up
+                  key_up_pressed();
+                  dirty = true;
+              }
+              else if (offset.y < 0) {
+                  // moved down
+                  key_down_pressed();
+                  dirty = true;
+              }
+          }
+          dragging = true;
+          if (dirty) RerenderImage(image, BB, sample_size, numThreads);
+      }
+      else {
+          mouse_pos = vec3(mx, my, 0);
+          dragging = false;
+      }
       glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW); //upload vertices to vbo
       
       // Clear the screen to grey

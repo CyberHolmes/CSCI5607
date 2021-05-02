@@ -14,7 +14,7 @@ float turnSpeed=1;
 
 struct Camera
 {
-   vec3 eye; 
+    vec3 eye; 
     vec3 forward;
     vec3 up;
     vec3 right;
