@@ -4,6 +4,7 @@
 #define MIN_T 0.001
 #define MAX_T 999999
 #include <cstdint>
+#include <cmath>
 #include <stdlib.h>
 
 #define PATH_USELIGHT
@@ -26,7 +27,11 @@ inline float mymax(float a, float b, float c){
     out = (out<c)? c:out;
     return out;
 }
-
+#ifdef _MSC_VER
+inline int log2_asm(int x) {
+    return log2(x);
+}
+#else
 inline int log2_asm(int x){
 	uint32_t y(0);
 	asm ("\tbsr %1, %0\n"
@@ -35,5 +40,5 @@ inline int log2_asm(int x){
 	);
 	return y;
 }
-
+#endif
 #endif
