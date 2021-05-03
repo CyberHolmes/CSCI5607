@@ -57,8 +57,14 @@ Color& Image::GetPixel(int i, int j){
 
 Color Image::Sample(float x, float y) {
     // wrap the image if the uv coord is out of bounds
-    x = (x > 1.0) ? 1 - x : (x < 0.0) ? 1.0 + x : x;
-    y = (y > 1.0) ? 1 - y : (y < 0.0) ? 1.0 + y : y;
+    while (x > 1.0)
+        x = 1 - x;
+    while (x < 0)
+        x = x + 1;
+    while (y > 1.0)
+        y = 1 - y;
+    while (y < 0)
+        y = y + 1;
     // find the location in the image
     int pix_loc_x = round(width * x);
     int pix_loc_y = std::max(std::min((int)round(height * y), height - 1), (int)0);

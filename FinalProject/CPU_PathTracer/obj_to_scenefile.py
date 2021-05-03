@@ -61,7 +61,7 @@ def convert(in_file_name, out_file_name):
             mat_str = "material: " + materials[line_data[1]].writeToString()
             out_fs.write(mat_str + '\n')
             if materials[line_data[1]].texture_name != '':
-                texture_str = "texture: " + materials[line_data[1]].texture_name
+                texture_str = "texture: textures/" + materials[line_data[1]].texture_name
                 out_fs.write(texture_str + '\n')
         elif line_data[0] == 'f':
             # this is where the lion's share of the work is done.
@@ -134,8 +134,8 @@ class material:
         mat_str = ''
         mat_str += str(self.ka_r) + ' ' + str(self.ka_g) + ' ' + str(self.ka_b) + ' '
         mat_str += str(self.kd_r) + ' ' + str(self.kd_g) + ' ' + str(self.kd_b) + ' '
-        mat_str += str(self.ks_r) + ' ' + str(self.ks_g) + ' ' + str(self.ks_b) + ' ' + str(self.ns)
-        mat_str += str(self.kt_r) + ' ' + str(self.kt_g) + ' ' + str(self.kt_b) + ' ' + str(self.ior)
+        mat_str += str(self.ks_r) + ' ' + str(self.ks_g) + ' ' + str(self.ks_b) + ' ' + str(self.ns) + ' '
+        mat_str += str(self.kt_r) + ' ' + str(self.kt_g) + ' ' + str(self.kt_b) + ' ' + str(self.ior) + ' '
         return mat_str
 
 def loadMaterialFile(material_file_name):
@@ -176,7 +176,7 @@ def loadMaterialFile(material_file_name):
         elif line_data[0] == 'Ni':
             # add Index of Refraction
             m.ior = line_data[1]   
-        elif line_data[0] == 'map_Kd':
+        elif line_data[0] == 'map_Kd' or line_data[0] == 'map_Ka':
             # add texture
             m.texture_name = line_data[1]
     # grab the last material

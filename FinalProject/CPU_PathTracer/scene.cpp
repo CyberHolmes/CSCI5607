@@ -44,6 +44,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     float diffusive_a = diffusive_l/l_sum;
     float reflective_a = refractive_l/l_sum;
     float refractive_a = refractive_l/l_sum;
+    c_out = c_out + ambientlight * hi.m.ac;
     for (int i=0; i<numLights; i++){
         Light* l = lights[i];       
         Ray ray_shadow = Ray(hi.hitPos, l->CalDir(hi.hitPos), 1);
@@ -56,6 +57,9 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         } else if (shadow_hit && shadow_hitInfo.t < Distance(l->p, hi.hitPos )) 
             continue;
         c_out = c_out + l->Shading(hi)*diffusive_a;        
+    }
+    if (hi.texture_map != nullptr) {
+        c_out = c_out * hi.texture_map->Sample(hi.tex_coord.x, hi.tex_coord.y);
     }
     if (hi.rayDepth>0){
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
@@ -76,7 +80,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
             c_out = c_out + hi.m.tc * EvaluateRayTree(ray_refract, BB)*refractive_a;
         }
     }
-    c_out = c_out+ ambientlight * hi.m.ac;
+    
     return c_out;
 };
 Color Scene::EvaluateRayTree(Ray& ray, BoundingBox* BB){
@@ -197,6 +201,9 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth, bool uselight){
         Ray ray_indirect = Ray(hi.hitPos, new_dir, depth-1);           
         float ctheta = dot(new_dir,hi.hitNorm);            
         c_indirect = hi.m.dc * TracePath(ray_indirect, BB, depth-1, uselight) * diffusive_a;// *ctheta * ctheta;
+        if (hi.texture_map != nullptr) {
+            c_indirect = c_indirect * hi.texture_map->Sample(hi.tex_coord.x, hi.tex_coord.y);
+        }
         cnt++;
     }    
     if (reflective)
