@@ -582,7 +582,10 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
          c_sum = c_sum + c;
          k++;
       }
-      image->SetPixel(i,j,c_sum * (1.0/k));
+      // Tone mapping the result so colors don't white out
+      Color val = (c_sum * (1.0 / k));
+      Color tone_mapped(val.r / (val.r + 1), val.g / (val.g + 1), val.b / (val.b + 1));
+      image->SetPixel(i,j,tone_mapped);
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();

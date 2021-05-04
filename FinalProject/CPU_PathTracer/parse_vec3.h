@@ -59,10 +59,10 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       float ar,ag,ab;
       float dr,dg,db;
       float sr,sg,sb;
-      int ns;
+      float ns;
       float tr,tg,tb,ior;
       float er=0,eg=0,eb=0;
-      sscanf(line, "material: %f %f %f %f %f %f %f %f %f %d %f %f %f %f %f %f %f",
+      int num_read = sscanf(line, "material: %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f %f",
         &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior,&er,&eg,&eb);
       m = Material();
       m.SetAmbientColor(Color(ar,ag,ab));
