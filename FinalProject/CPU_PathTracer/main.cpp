@@ -14,6 +14,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include "./oidn/include/OpenImageDenoise/oidn.hpp"
 
 using namespace std;
 
@@ -44,10 +45,10 @@ using namespace std;
 
 static void CheckOption(char *option, int argc, int minargc);
 void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
-void RerenderImage(Image* image, BoundingBox* BB, int sample_size, int numThreads);
+void RerenderImage(Image* image, Image* image_denoise, BoundingBox* BB, int sample_size, int numThreads);
 static void ShowUsage(void);
 void OpenGLRender(SDL_Window* window, Image* image);
-void PixelRender(SDL_Window* window, Image* image, int step, int sample_size, BoundingBox* BB);
+void Denoise(Image* imgin, Image* imgout);
 
 //Global variables
 Scene* scene = new Scene();
@@ -103,7 +104,7 @@ const GLchar* fragmentSource =
 bool fullscreen = false;
 float mouse_dragging = false;
 bool pathTrace = false; //default is ray trace
-bool uselight = false; //path tracing lighting option control
+bool uselight = true; //path tracing lighting option control
 int main(int argc, char *argv[]){
    int sample_size = 1000; //set default sample_size, may be overwritten by command input
    int numThreads = 8; //default number of threads, may be overwritten by command input
@@ -183,32 +184,15 @@ int main(int argc, char *argv[]){
       maxV.y = (maxV.y<curMaxV.y)?curMaxV.y:maxV.y;
       maxV.z = (maxV.z<curMaxV.z)?curMaxV.z:maxV.z;
    }
-   BoundingBox* BB1 = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
-
-
-   //BVH for path tracer
-   std::vector<Obj*> objList2 = scene->GetObjects2();
-   minV = vec3(MAX_T,MAX_T,MAX_T); maxV = vec3(-MAX_T,-MAX_T,-MAX_T);
-   // printf("number objects = %ld\n",objList.size());
-   for ( auto const& obj : objList2){
-      vec3 curMinV = obj->GetBoundMin();
-      vec3 curMaxV = obj->GetBoundMax();
-      // printf("pos=%f,%f,%f\n",obj->GetPos().x,obj->GetPos().y,obj->GetPos().z);
-      minV.x = (minV.x>curMinV.x)?curMinV.x:minV.x;
-      minV.y = (minV.y>curMinV.y)?curMinV.y:minV.y;
-      minV.z = (minV.z>curMinV.z)?curMinV.z:minV.z;
-      maxV.x = (maxV.x<curMaxV.x)?curMaxV.x:maxV.x;
-      maxV.y = (maxV.y<curMaxV.y)?curMaxV.y:maxV.y;
-      maxV.z = (maxV.z<curMaxV.z)?curMaxV.z:maxV.z;
-   }
-   BoundingBox* BB2 = BuildBVHTree(objList2,minV,maxV,log2_asm(objList2.size())+2);
+   BoundingBox* BB = BuildBVHTree(objList,minV,maxV,log2_asm(objList.size())+2);
 
    auto t_end = std::chrono::high_resolution_clock::now();
    printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-
+   img_width = 300;img_height = 300;
    Image* image = new Image(img_width,img_height); 
-   BoundingBox* BB = (pathTrace)?BB2:BB1; //pointer to switch the two BVHs 
+   Image* image_denoise = new Image(img_width,img_height); 
    UpdateImage(image, BB,sample_size,numThreads);
+   Denoise(image,image_denoise);
 
   //Update file name with time stamp
   char date[50];
@@ -217,7 +201,7 @@ int main(int argc, char *argv[]){
   int dotp = imgName.find_last_of(".");
   std::string fileName = imgName.substr(0,dotp);
   std::string ext = imgName.substr(dotp);
-  std::string outFileName;
+  std::string outFileName, outFileName_denoise;
   
    t_start = std::chrono::high_resolution_clock::now();
    SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
@@ -271,8 +255,10 @@ int main(int argc, char *argv[]){
    // image->Write(imgName.c_str());
    tm = localtime(&t);
    strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
-   outFileName = fileName + string(date) + ext;
+   outFileName = fileName + string(date) + ext;   
    image->Write(outFileName.c_str());
+   outFileName_denoise = fileName + string("_denoise") + string(date) + ext;
+   image_denoise->Write(outFileName_denoise.c_str());
     //memset(img_data,0,4*img_w*img_h); //Load all zeros
    //Load the texture into memory
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
@@ -354,7 +340,7 @@ int main(int argc, char *argv[]){
    bool done = false;
    bool dragging = false;
    vec3 mouse_pos;
-   // bool gammaOn = false;      
+   bool show_denoise = false;     
 
    while (!done){
       // t_start = std::chrono::high_resolution_clock::now();
@@ -373,90 +359,98 @@ int main(int argc, char *argv[]){
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
             image->Write(outFileName.c_str());
+            outFileName_denoise = fileName + string("_denoise") + string(date) + ext;
+            image_denoise->Write(outFileName_denoise.c_str());
          }  
-         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //b - reset the camera
-         {
-            *camera = *camera0;
-            printf("resetting the scene.\n");
-            camera->PrintState();
-            UpdateImage(image, BB,sample_size,numThreads);
-            image->UpdateRawPixels();
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
-            glGenerateMipmap(GL_TEXTURE_2D);
-         }  
+          
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_p) //p - toggle between path trace and ray trace
             {
                pathTrace = !pathTrace;
-               BB = (pathTrace)? BB2 :BB1;
-               RerenderImage(image, BB,sample_size, numThreads);
+               RerenderImage(image, image_denoise, BB,sample_size, numThreads);
             }
          if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_l) //l - path trace lighting option control, does nothing if ray trace
             {
                if (pathTrace){
                   uselight = !uselight;
-                  if (uselight) BB = BB1;
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                }
             }
+         if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_SPACE) //space - show denoise image
+            {
+               show_denoise = !show_denoise;
+               if (show_denoise) glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_denoise->rawPixels);
+               else glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
+               glGenerateMipmap(GL_TEXTURE_2D);
+            }
          if (!pathTrace){
+            if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_b) //b - reset the camera
+            {
+               *camera = *camera0;
+               printf("resetting the scene.\n");
+               camera->PrintState();
+               UpdateImage(image, BB,sample_size,numThreads);
+               image->UpdateRawPixels();
+               glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
+               glGenerateMipmap(GL_TEXTURE_2D);
+            } 
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_w) //If "w" is pressed
                {
                   key_w_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                   }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_s) //If "s" is pressed
                {
                   key_s_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_a) //If "a" is pressed
                {
                   key_a_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_d) //If "d" is pressed
                {
                   key_d_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_q) //If "o" is pressed
                {
                   key_q_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_e) //If "o" is pressed
                {
                   key_e_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_LEFT) //If "left arrow" is pressed
                {
                   key_left_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_RIGHT) //If "right arrow" is pressed
                {
                   key_right_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_UP) //If "left arrow" is pressed
                {
                   key_up_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
             if (windowEvent.type == SDL_KEYUP && windowEvent.key.keysym.sym == SDLK_DOWN) //If "right arrow" is pressed
                {
                   key_down_pressed();
-                  RerenderImage(image, BB,sample_size, numThreads);
+                  RerenderImage(image, image_denoise, BB,sample_size, numThreads);
                   camera->PrintState();
                }
          }
@@ -498,9 +492,10 @@ int main(int argc, char *argv[]){
                   key_down_pressed();
                   dirty = true;
               }
+              SDL_WarpMouseInWindow(window,img_width/2, img_height/2); //reset mouse position
           }
           dragging = true;
-          if (dirty) RerenderImage(image, BB, sample_size, numThreads);
+          if (dirty) RerenderImage(image, image_denoise, BB, sample_size, numThreads);
       }
       else {
           mouse_pos = vec3(mx, my, 0);
@@ -516,13 +511,11 @@ int main(int argc, char *argv[]){
 
       SDL_GL_SwapWindow(window); //Double buffering
    }
-   DeallocateBVHTree(BB1);
-   DeallocateBVHTree(BB2);
-   BB1 = NULL;
-   BB2 = NULL;
+   DeallocateBVHTree(BB);
    BB = NULL;
    // delete [] img_data;
    delete image;
+   delete image_denoise;
    delete camera;
    delete camera0;
    delete scene;
@@ -592,11 +585,12 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
   printf("Rendering took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
 }
 
-void RerenderImage(Image* image, BoundingBox* BB, int sample_size, int numThreads){
+void RerenderImage(Image* image, Image* image_denoise, BoundingBox* BB, int sample_size, int numThreads){
    // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
    camera->Update(0.1);    
    UpdateImage(image, BB,sample_size, numThreads); //sample_size=1 to speed up rendering
    image->UpdateRawPixels();
+   Denoise(image,image_denoise);
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
    glGenerateMipmap(GL_TEXTURE_2D);
 }
@@ -627,4 +621,59 @@ void OpenGLRender(SDL_Window* window, Image* image){
    glDrawArrays(GL_TRIANGLE_STRIP, 4, 4); //Draw the two triangles (4 vertices) making up the square
    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4); //Draw the two triangles (4 vertices) making up the square
    SDL_GL_SwapWindow(window); //Double buffering   
+}
+
+void Denoise(Image* imgin, Image* imgout){
+   float* img_data = NULL;
+   float* out_img_data = NULL;
+   int n = 0;
+
+   img_data = new float[img_width*img_height*3];   
+   out_img_data = new float[img_width*img_height*3];
+   
+   for (int j=0;j<img_height;j++){
+    for (int i=0;i<img_width;i++){  
+        Color c = imgin->GetPixel(i,j);  
+        img_data[n] = c.r; n++;
+        img_data[n] = c.g; n++;
+        img_data[n] = c.b; n++;   
+       }
+   }
+
+    // Create an Intel Open Image Denoise device
+   OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_DEFAULT);
+   oidnCommitDevice(device);
+
+   // Create a denoising filter
+   OIDNFilter filter = oidnNewFilter(device, "RT"); // generic ray tracing filter
+   oidnSetSharedFilterImage(filter, "color",  img_data,
+                           OIDN_FORMAT_FLOAT3, img_width, img_height, 0, 0, 0);
+   // oidnSetSharedFilterImage(filter, "albedo", albedoPtr,
+   //                          OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0); // optional
+   // oidnSetSharedFilterImage(filter, "normal", normalPtr,
+   //                          OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0); // optional
+   oidnSetSharedFilterImage(filter, "output", out_img_data,
+                           OIDN_FORMAT_FLOAT3, img_width, img_height, 0, 0, 0);
+   oidnSetFilter1b(filter, "hdr", true); // image is HDR
+   oidnCommitFilter(filter);
+
+   // Filter the image
+   oidnExecuteFilter(filter);
+
+   // Check for errors
+   const char* errorMessage;
+   if (oidnGetDeviceError(device, &errorMessage) != OIDN_ERROR_NONE)
+   printf("Error: %s\n", errorMessage);
+    //Output image file
+    n=0;
+   for (int j=0;j<img_height;j++){
+    for (int i=0;i<img_width;i++){
+        // printf("i=%d,j=%d\n",i,j);
+        float r = out_img_data[n];n++;
+        float g = out_img_data[n];n++;
+        float b = out_img_data[n];n++;
+        imgout->SetPixel(i,j,Color(r,g,b));
+       }
+   }
+   delete img_data; delete out_img_data;
 }

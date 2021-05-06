@@ -1,29 +1,29 @@
 #Side view of dragon
 camera_pos: 0 0.1 0.3
 camera_fwd: 0 0 1
-directional_light: .3 .3 .3 1 -1 -1
+directional_light: .5 .5 .5 1 -1 -1
 
 #Front view of dragon
 #camera_pos: -.3 .1 -.17
 #camera_fwd: 1 0 0.6
 #directional_light: .9 .9 .9 0.609525 -0.664451 0.432416
-
-
 camera_up:  0 1 0
 camera_fov_ha: 23
 film_resolution: 512 384
-output_image: dragon.png
+
+output_image: ./out/dragon.png
+
+material: 0 0 1 0 0 1 0 0 0 16 0 0 0 1.0 20 20 20
+sphere: 0 10 0 1.25
 
 background: 0.125 0.5 1
-
 max_vertices: 10009
 max_normals: 15009
 
 ambient_light: .2 .2 .2
 
-
-#material: .2 .2 .2 .2 .8 .1 0 0 0 .2 0 0 0 1
-material: .2 .2 .2 .93 .667 .043 .2 .1 .1 .2 0 0 0 1
+material: .2 .2 .2 .2 .8 .1 0 0 0 .2 0 0 0 1
+#material: .2 .2 .2 .93 .667 .043 .2 .1 .1 .2 0 0 0 1
 
 
 vertex:  0.0415575  0.0810352  0.0161619  

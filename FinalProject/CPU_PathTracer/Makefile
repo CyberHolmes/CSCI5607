@@ -5,7 +5,7 @@
 #g++ -fsanitize=address -std=c++14
 
 ray: main.o image.o scene.o objects.o bvh.o
-	g++ -fopenmp -std=c++14 -O3 main.o image.o scene.o objects.o bvh.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray
+	g++ -fopenmp -std=c++14 -O3 main.o image.o scene.o objects.o bvh.o glad/glad.c -lSDL2 -lSDL2main -lGL -ldl -I/usr/include/SDL2/ -o ray -L oidn/lib/ -lOpenImageDenoise 
 
 main.o: main.cpp
 	g++ -fopenmp -std=c++14 -O3 main.cpp -c

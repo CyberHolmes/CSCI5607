@@ -4,10 +4,6 @@ void Scene::AddObject(Obj* o){
     objects.emplace_back(o);
     numObj++;
 }
-void Scene::AddObject2(Obj* o){
-    objects2.emplace_back(o);
-    numObj2++;
-}
 
 void Scene::AddLight(Light* l){
     lights.emplace_back(l);
@@ -44,7 +40,6 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
     float diffusive_a = diffusive_l/l_sum;
     float reflective_a = refractive_l/l_sum;
     float refractive_a = refractive_l/l_sum;
-    c_out = c_out + ambientlight * hi.m.ac;
     for (int i=0; i<numLights; i++){
         Light* l = lights[i];       
         Ray ray_shadow = Ray(hi.hitPos, l->CalDir(hi.hitPos), 1);
@@ -57,9 +52,6 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
         } else if (shadow_hit && shadow_hitInfo.t < Distance(l->p, hi.hitPos )) 
             continue;
         c_out = c_out + l->Shading(hi)*diffusive_a;        
-    }
-    if (hi.texture_map != nullptr) {
-        c_out = c_out * hi.texture_map->Sample(hi.tex_coord.x, hi.tex_coord.y);
     }
     if (hi.rayDepth>0){
         float ctheta = dot(ray.d,hi.hitNorm); //cos of angle between ray and hit normal
@@ -80,7 +72,7 @@ Color Scene::ApplyLightingModel (Ray& ray, HitInfo& hi, BoundingBox* BB){
             c_out = c_out + hi.m.tc * EvaluateRayTree(ray_refract, BB)*refractive_a;
         }
     }
-    
+    c_out = c_out + ambientlight * hi.m.ac;
     return c_out;
 };
 Color Scene::EvaluateRayTree(Ray& ray, BoundingBox* BB){
@@ -157,10 +149,6 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth, bool uselight){
         } //end if uselight
         return background;//Color(0,0,0);
     }
-
-    if (!uselight && hi.m.ec.mag()>0.0) {
-        return hi.m.ec;
-    }
    
     // bool diffusive = false;//(m.dc.mag()>0.0);
     // bool reflective = false;//(m.sc.mag()>0.0);
@@ -182,6 +170,7 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth, bool uselight){
     Color c_indirect = Color(0,0,0);
     Color c_reflective = Color(0,0,0);
     Color c_refractive = Color(0,0,0);
+    Color c_direct = Color(0,0,0);
 
     float diffusive_l = hi.m.dc.luminance();
     float reflective_l = hi.m.sc.luminance();
@@ -199,11 +188,8 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth, bool uselight){
         vec3 t2 = cross(hi.hitNorm,t1).normalized();
         new_dir = sampleAroundNormalCosine(hi.hitNorm,t1,t2);  //CosineSampleHemisphere(hi.hitNorm,t1,t2);         
         Ray ray_indirect = Ray(hi.hitPos, new_dir, depth-1);           
-        float ctheta = dot(new_dir,hi.hitNorm);            
+        // float ctheta = dot(new_dir,hi.hitNorm);            
         c_indirect = hi.m.dc * TracePath(ray_indirect, BB, depth-1, uselight) * diffusive_a;// *ctheta * ctheta;
-        if (hi.texture_map != nullptr) {
-            c_indirect = c_indirect * hi.texture_map->Sample(hi.tex_coord.x, hi.tex_coord.y);
-        }
         cnt++;
     }    
     if (reflective)
@@ -231,5 +217,21 @@ Color Scene::TracePath(Ray& ray, BoundingBox* BB, int depth, bool uselight){
             cnt++;
         }
     }
-    return (c_reflective + c_indirect + c_refractive);// + m.ac * ambientlight;    
+    //direct lighting
+    // if (uselight){
+    //     for (int i=0; i<numLights; i++){
+    //         Light* l = lights[i];       
+    //         Ray ray_shadow = Ray(hi.hitPos, l->CalDir(hi.hitPos), 1);
+    //         HitInfo shadow_hitInfo;
+    //         // bool shadow_hit = Hit(ray_shadow,shadow_hitInfo);
+    //         bool shadow_hit = SearchBVHTree(ray_shadow, BB, shadow_hitInfo);
+    //         //check if the ray is blocked from the light source
+    //         if (l->type == DIRECTION_LIGHT){
+    //             if (shadow_hit) continue;
+    //         } else if (shadow_hit && shadow_hitInfo.t < Distance(l->p, hi.hitPos )) 
+    //             continue;
+    //         c_direct = c_direct + l->Shading(hi)*diffusive_a;        
+    //     }
+    // }
+    return (c_reflective + c_indirect + c_refractive + hi.m.ec + c_direct);// + m.ac * ambientlight;    
 }
