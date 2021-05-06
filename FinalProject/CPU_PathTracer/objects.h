@@ -23,11 +23,13 @@ struct Material{
     Color tc; //transmisive color
     float ior; //index of reflection
     Color ec; //emissive coefficients
+    int d_idx; //for path tracing's probabbility of diffuse ray
+    int r_idx; //for path tracing's probabbility of reflective ray
 
     //constructor
-    Material() : ac(0,0,0), dc(0,0,0), sc(0,0,0), ns(1), tc(0,0,0), ior(1.0), ec(0,0,0) {}
-    Material(Color ac_, Color dc_, Color sc_, int ns_, Color tc_, float ior_, Color ec_):
-        ac(ac_), dc(dc_), sc(sc_), ns(ns_), tc(tc_), ior(ior_), ec(ec_) {}
+    Material() : ac(0,0,0), dc(0,0,0), sc(0,0,0), ns(1), tc(0,0,0), ior(1.0), ec(0,0,0), d_idx(0), r_idx(0) {}
+    // Material(Color ac_, Color dc_, Color sc_, int ns_, Color tc_, float ior_, Color ec_):
+    //     ac(ac_), dc(dc_), sc(sc_), ns(ns_), tc(tc_), ior(ior_), ec(ec_) {}
 
     void SetAmbientColor(const Color& c) { ac = c;}
     void SetDiffuseColor(const Color& c) {dc = c;}
@@ -36,6 +38,7 @@ struct Material{
     void SetPhongFactor(const int& n) {ns = n;}
     void SetIOR(const float& f) {ior = f;}
     void SetEmmissiveColor(const Color& c) {ec = c;}
+    void CalcProbabilityIdx();
     
     ~Material(){}
 };

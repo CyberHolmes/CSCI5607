@@ -1,5 +1,17 @@
 #include "objects.h"
 
+void Material::CalcProbabilityIdx(){
+    float diffusive_l = dc.mag();
+    float reflective_l = sc.mag();
+    float refractive_l = tc.mag();
+    float l_sum = diffusive_l + reflective_l + refractive_l;
+    float diffusive_a = diffusive_l/l_sum;
+    float reflective_a = reflective_l/l_sum;
+    float refractive_a = refractive_l/l_sum;
+    d_idx = ceil(diffusive_a *100.0);
+    r_idx = ceil(reflective_a*100.0) + d_idx;
+};
+
 vec3 Obj::GetPos(){
     return pos;
 }

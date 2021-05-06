@@ -72,6 +72,7 @@ void parseSceneFile(std::string fileName, Scene* scene, Camera* camera){
       m.SetPhongFactor(ns);
       m.SetIOR(ior);
       m.SetEmmissiveColor(Color(er,eg,eb));
+      m.CalcProbabilityIdx();
       materialList.emplace_back(m);
       midx++;
     }    

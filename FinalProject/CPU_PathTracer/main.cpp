@@ -104,10 +104,10 @@ const GLchar* fragmentSource =
 bool fullscreen = false;
 float mouse_dragging = false;
 bool pathTrace = false; //default is ray trace
-bool uselight = true; //path tracing lighting option control
+bool uselight = false; //path tracing lighting option control
 int main(int argc, char *argv[]){
    int sample_size = 1000; //set default sample_size, may be overwritten by command input
-   int numThreads = 8; //default number of threads, may be overwritten by command input
+   int numThreads = 8; //default number of threads, may be overwritten by command input   
    
   //Read command line paramaters to get scene file
    if (argc < 2){
@@ -128,11 +128,7 @@ int main(int argc, char *argv[]){
       if (**argv == '-'){
          if (!strcmp(*argv, "-samplesize"))
          {
-            // printf("argc=%d\n",argc);
-            // printf("argv=%s\n",argv[1]);
             CheckOption(*argv, argc, 2);
-            // printf("argc=%d\n",argc);
-            // printf("argv=%s\n",argv[1]);
             sample_size = atoi(argv[1]);
             argv += 2, argc -= 2;
          } else if (!strcmp(*argv, "-numthreads"))
@@ -149,7 +145,12 @@ int main(int argc, char *argv[]){
          {
             pathTrace = true;
             argv += 1, argc -= 1;
-         } else {
+         } else if (!strcmp(*argv, "-resolution"))
+         {
+            img_width = atoi(argv[1]);
+            img_height = atoi(argv[2]);
+            argv += 3, argc -= 3;
+         }  else {
 				fprintf(stderr, "ray: invalid option: %s\n", *argv);
 				ShowUsage();
 			}
@@ -163,10 +164,22 @@ int main(int argc, char *argv[]){
    normalList.reserve(500);
    materialList.reserve(50);
 
-   printf("sample size = %d, ray depth = %d, number of threads = %d\n",
-      sample_size, max_depth,numThreads);
+   printf("sample size = %d, ray depth = %d, image size = %d x %d, number of threads = %d\n",
+      sample_size, max_depth, img_width, img_height, numThreads);
    
    scene->SetMaxDepth(max_depth);
+
+   //Update file name with time stamp
+  char date[50];
+  time_t t = time(NULL);
+  struct tm *tm;
+  int dotp = imgName.find_last_of(".");
+  std::string fileName = imgName.substr(0,dotp);
+  std::string ext = imgName.substr(dotp);
+  std::string outFileName, outFileName_denoise;
+  tm = localtime(&t);
+   strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
+   printf("start time: %s\n",date);
    
    auto t_start = std::chrono::high_resolution_clock::now();
    //BVH for ray tracer
@@ -188,20 +201,11 @@ int main(int argc, char *argv[]){
 
    auto t_end = std::chrono::high_resolution_clock::now();
    printf("Building BVH took %.2f ms\n",std::chrono::duration<double, std::milli>(t_end-t_start).count());
-   img_width = 300;img_height = 300;
+   // img_width = 1024;img_height = 768;
    Image* image = new Image(img_width,img_height); 
    Image* image_denoise = new Image(img_width,img_height); 
    UpdateImage(image, BB,sample_size,numThreads);
-   Denoise(image,image_denoise);
-
-  //Update file name with time stamp
-  char date[50];
-  time_t t = time(NULL);
-  struct tm *tm;
-  int dotp = imgName.find_last_of(".");
-  std::string fileName = imgName.substr(0,dotp);
-  std::string ext = imgName.substr(dotp);
-  std::string outFileName, outFileName_denoise;
+   Denoise(image,image_denoise); 
   
    t_start = std::chrono::high_resolution_clock::now();
    SDL_Init(SDL_INIT_VIDEO);  //Initialize Graphics (for OpenGL)
@@ -257,8 +261,9 @@ int main(int argc, char *argv[]){
    strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
    outFileName = fileName + string(date) + ext;   
    image->Write(outFileName.c_str());
-   outFileName_denoise = fileName + string("_denoise") + string(date) + ext;
+   outFileName_denoise = fileName + string(date) + string("_denoise") + ext;
    image_denoise->Write(outFileName_denoise.c_str());
+   printf("end time: %s\n",date);
     //memset(img_data,0,4*img_w*img_h); //Load all zeros
    //Load the texture into memory
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
@@ -359,7 +364,7 @@ int main(int argc, char *argv[]){
             strftime(date, sizeof(date), "_%y%m%d_%H%M%S",tm);
             outFileName = fileName + string(date) + ext;
             image->Write(outFileName.c_str());
-            outFileName_denoise = fileName + string("_denoise") + string(date) + ext;
+            outFileName_denoise = fileName + string(date) + string("_denoise") + ext;
             image_denoise->Write(outFileName_denoise.c_str());
          }  
           
@@ -576,9 +581,9 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
          k++;
       }
       // Tone mapping the result so colors don't white out
-      Color val = (c_sum * (1.0 / k));
-      Color tone_mapped(val.r / (val.r + 1), val.g / (val.g + 1), val.b / (val.b + 1));
-      image->SetPixel(i,j,tone_mapped);
+      // Color val = (c_sum * (1.0 / k));
+      // Color tone_mapped(val.r / (val.r + 1.0), val.g / (val.g + 1.0), val.b / (val.b + 1.0));
+      image->SetPixel(i,j,c_sum * (1.0 / k));
     }
   }
   auto t_end = std::chrono::high_resolution_clock::now();
@@ -588,9 +593,10 @@ void UpdateImage(Image* image, BoundingBox* BB, int sample_size, int numThreads)
 void RerenderImage(Image* image, Image* image_denoise, BoundingBox* BB, int sample_size, int numThreads){
    // sample_size = 1; max_depth = 2; //change parameter to speed up rendering at the expense of the image quality
    camera->Update(0.1);    
-   UpdateImage(image, BB,sample_size, numThreads); //sample_size=1 to speed up rendering
+   UpdateImage(image, BB,sample_size, numThreads); 
    image->UpdateRawPixels();
    Denoise(image,image_denoise);
+   image_denoise->UpdateRawPixels();
    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img_width, img_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image->rawPixels);
    glGenerateMipmap(GL_TEXTURE_2D);
 }
@@ -668,7 +674,6 @@ void Denoise(Image* imgin, Image* imgout){
     n=0;
    for (int j=0;j<img_height;j++){
     for (int i=0;i<img_width;i++){
-        // printf("i=%d,j=%d\n",i,j);
         float r = out_img_data[n];n++;
         float g = out_img_data[n];n++;
         float b = out_img_data[n];n++;
