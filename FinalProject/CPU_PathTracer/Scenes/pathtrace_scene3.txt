@@ -1,0 +1,86 @@
+#Simple sphere: Scene
+#camera_pos: 25 8 0
+#camera_fwd: 1 0 0
+camera_pos: 24.702988 8.000000 -1.465204
+camera_fwd: 0.980067 0.000000 -0.198669
+camera_up:  0 1 0
+camera_fov_ha: 25
+output_image: ./out/pathtrace_scene3.png
+
+#white overhead light
+point_light: 8 8 8 0 14 0
+#directional_light: 5 0.5 0.5 1 -1 0
+#spot_light: 10 10 10 0 -1 0 20 20
+ambient_light: .25 .25 .25
+background: .05 .05 .05
+
+max_vertices: 12
+max_normals: 0
+vertex: -15   0 -10
+vertex: -15   0  10
+vertex:  15   0  10
+vertex:  15   0 -10
+vertex: -15  15 -10
+vertex: -15  15  10
+vertex:  15  15  10
+vertex:  15  15 -10
+vertex: -2  14.9 -2
+vertex: -2  14.9  2
+vertex:  2  14.9  2
+vertex:  2  14.9 -2
+
+#ground
+#material type: white dull &ar,&ag,&ab,&dr,&dg,&db,&sr,&sg,&sb,&ns,&tr,&tg,&tb,&ior,&er,&eg,&eb
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0.2 0.2 0.2 1 0 0 0 1.0
+triangle: 0 1 2
+triangle: 0 2 3
+
+#back
+#material type:
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0 
+triangle: 0 4 5
+triangle: 0 5 1
+
+#left side
+#material type:
+material: 0.9 0.1 0.1 0.9 0.1 0.1 0 0 0 1 0 0 0 1.0
+triangle: 0 4 7
+triangle: 0 7 3
+
+#right side
+#material type:
+material: 0.1 0.9 0.1 0.1 0.9 0.1 0 0 0 1 0 0 0 1.0
+triangle: 1 5 6
+triangle: 1 6 2
+
+#ceiling
+#material type:
+material: 0.5 0.5 0.5 0.5 0.5 0.5 0 0 0 1 0 0 0 1.0
+triangle: 4 5 6
+triangle: 4 6 7
+
+#ceiling emmissive area
+#material type:
+material: 0.5 0.5 0.5 0.5 0.5 0.5 0 0 0 1 0 0 0 1.0 20 20 20
+triangle: 8 9 10
+triangle: 8 10 11
+
+#Box:
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0.5 0.5 0.5 1 0 0 0 1.0
+box: -2 2 -4 4
+
+#sphere on top of box:
+material: 0.9 0.9 0.9 0.714 0.428 0.181 0.394 0.272 0.167 26 0 0 0 1.0
+sphere: -2 5.5 -4 1.5
+
+#box2:
+material: 1 1 1 1 1 1 0.5 0.5 0.5 1 0 0 0 1.0
+box: -2 3 4 6
+
+#sphere2:
+material: 0 0 0 0 0 0 .5 .5 .5 10 1 1 1 1.5
+sphere: -2 8.5 4 2.5
+
+#light sphere:
+#material: 0.9 0.9 0.9 0.9 0.9 0.9 0.5 0.5 0.5 1 0 0 0 1.0 10 10 10
+#sphere: 0 35 0 10

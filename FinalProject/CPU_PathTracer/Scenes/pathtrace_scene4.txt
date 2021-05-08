@@ -1,0 +1,186 @@
+
+camera_pos: 30 4 0
+camera_fwd: 1 0.1 0
+camera_fov_ha: 25
+point_light: 15 15 15 -10 12 -14.9
+point_light: 15 15 15 0 12 -14.9
+point_light: 15 15 15 10 12 -14.9
+point_light: 15 15 15 -10 12 14.9
+point_light: 15 15 15 0 12 14.9
+point_light: 15 15 15 10 12 14.9
+point_light: 15 15 15 -14.9 12 -7
+point_light: 15 15 15 -14.9 12 7
+point_light: 15 15 15 15 12 14.9
+point_light: 15 15 15 -15 12 14.9
+point_light: 20 20 20 12 14.5 0
+
+film_resolution: 512 384
+
+output_image: ./out/pathtrace_scene4.png
+
+background: 0.2 0.2 0.2
+
+#sphere
+material: 0.78 0.569 0.114 0.78 0.569 0.114 0.992 0.941 0.808 28 0 0 0 1.0
+sphere: 0 0 2 4
+
+#sphere glow
+material: 0.752 0.606 0.226 0.752 0.606 0.226 0.628 0.556 0.366 51 0 0 0 1 2 2 2
+sphere: 2 5 -8 2
+
+#small sphere transparent
+material: 0.1 0.6 0.1 0.1 0.6 0.1 0.01 0.1 0.01 51 0.9 0.9 0.9 1.2
+sphere: 5 -2 -2 1.5
+
+CSG: 2
+material: 1 0 0 1 0 0 .3 .3 .3 32 0 0 0 1.0
+sphere: 5.5 -1.4 -8 2.6
+material: 0 1 0 0 0 1 0 0 0 16 0 0 0 1.0
+box: 5.5 -1.4 -8 4
+
+
+CSG: 2
+#blue sphere not box:
+material: 0.4 0.5 0.5 0.4 0.5 0.5 0.02 0.3 0.3 10 0 0 0 1
+box: 6.5 -2.1 8 3.8
+#material: 0 0 0 .7 .1 .1 .7 .1 .5 3 0 0 0 1.5
+sphere: 6.5 -2.1 8 2.3
+
+#sphere on top of CSG
+material: 0.5 0 0 0.5 0 0 0.7 0.6 0.6 32 0 0 0 1
+sphere: 6.5 1.5 8 2
+
+#Back wall
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0
+vertex: -15 -4 -15
+vertex: -15 15 -15
+vertex: -15 -4 15
+vertex: -15 15 15
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/brick_diffuse.png
+normal_map: textures/brick_normal.png
+triangle: 0 1 3 0 1 2
+triangle: 0 3 2 0 2 3
+
+#side wall
+material: 0.8 0.1 0.1 0.8 0.1 0.1 0 0 0 1 0 0 0 1.0
+vertex: -15 -4 -15
+vertex: -15 15 -15
+vertex: 25 -4 -15
+vertex: 25 15 -15
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/brick_diffuse.png
+normal_map: textures/brick_normal.png
+triangle: 4 5 7 4 5 6
+triangle: 4 7 6 4 6 7
+
+#side wall
+material: 0.1 0.6 0.6 0.1 0.6 0.6 0 0 0 1 0 0 0 1.0
+vertex: -15 -4 15
+vertex: -15 15 15
+vertex: 25 -4 15
+vertex: 25 15 15
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/brick_diffuse.png
+normal_map: textures/brick_normal.png
+triangle: 8 9 11 8 9 10
+triangle: 8 11 10 8 10 11
+
+#floor
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0
+vertex: -15 -4 -15
+vertex: -15 -4 15
+vertex: 15 -4 -15
+vertex: 15 -4 15
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/wood.bmp
+normal_map: textures/wood.bmp
+triangle: 12 13 15 12 13 14
+triangle: 12 15 14 12 14 15
+
+#ceiling
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0
+vertex: -15 15 -15
+vertex: -15 15 15
+vertex: 15 15 -15
+vertex: 15 15 15
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/KAMENstup.png
+normal_map: textures/KAMENstup.png
+triangle: 16 17 19 16 17 18
+triangle: 16 19 18 16 18 19
+
+#ceiling light
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0 10 10 10
+vertex: -8 14.9 -8
+vertex: -8 14.9 -2
+vertex: -2 14.9 -8
+vertex: -2 14.9 -2
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/KAMENstup.png
+normal_map: textures/KAMENstup.png
+triangle: 20 21 23
+triangle: 20 23 22
+
+#ceiling light
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0 10 10 10
+vertex: -8 14.9 2
+vertex: -8 14.9 8
+vertex: -2 14.9 2
+vertex: -2 14.9 8
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/KAMENstup.png
+normal_map: textures/KAMENstup.png
+triangle: 24 25 27
+triangle: 24 27 26
+
+#ceiling light
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0 10 10 10
+vertex: 2 14.9 -8
+vertex: 2 14.9 -2
+vertex: 8 14.9 -8
+vertex: 8 14.9 -2
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/KAMENstup.png
+normal_map: textures/KAMENstup.png
+triangle: 28 29 31
+triangle: 28 31 30
+
+#ceiling light
+material: 0.9 0.9 0.9 0.9 0.9 0.9 0 0 0 1 0 0 0 1.0 10 10 10
+vertex: 2 14.9 2
+vertex: 2 14.9 8
+vertex: 8 14.9 2
+vertex: 8 14.9 8
+uv: 0 0
+uv: 0 1
+uv: 1 1
+uv: 1 0
+texture: textures/wood.bmp
+normal_map: textures/wood.bmp
+triangle: 32 33 35
+triangle: 31 35 34
