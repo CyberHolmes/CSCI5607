@@ -2,7 +2,7 @@
 ```
 make
 ```
-### Before running the program:
+### Before running the program, run following command:
 ```
 export LD_LIBRARY_PATH=./oidn/lib/
 ```
